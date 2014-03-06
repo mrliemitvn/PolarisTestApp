@@ -10,6 +10,8 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_STATE" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
 
     <application
@@ -20,7 +22,8 @@
         android:theme="@style/AppTheme" >
         <activity
             android:name="com.septeni.polaris.activity.TestSDKActivity"
-            android:label="@string/app_name" >
+            android:label="@string/app_name"
+            android:windowSoftInputMode="stateHidden" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -77,14 +80,8 @@
         <!-- プロモーションID -->
         <meta-data
             android:name="PYXIS_PID"
-            android:value="174" />
-        <!-- Dev: 60226 -->
-        <!-- Stage: 60116 -->
-        <!-- Liem test staging: 201 -->
-        <!-- Yen test production: 120 -->
-        <!-- Yen test staging: 60560, 62294, 151, 174, 61 -->
-        <!-- Hai Anh test staging: 60116, 62304, 171 -->
-        <!-- Cao Hang test staging: 175, 177, 173 -->
+            android:value="186" />
+        <!-- Liem test staging: 179 -->
     </application>
 
 </manifest>

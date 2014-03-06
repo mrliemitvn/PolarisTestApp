@@ -1,266 +1,249 @@
 package com.septeni.polaris.activity;
 
 import java.io.File;
+import java.util.Calendar;
+import java.util.HashMap;
 
+import jp.co.septeni.pyxis.PyxisTracking.PyxisDBHelper;
 import jp.co.septeni.pyxis.PyxisTracking.PyxisTracking;
 import jp.co.septeni.pyxis.PyxisTracking.PyxisTracking.AppLimitMode;
 import android.app.AlarmManager;
+import android.app.AlertDialog;
 import android.app.PendingIntent;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageInfo;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
+import android.net.wifi.WifiManager;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.Handler;
 import android.support.v4.app.FragmentActivity;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.View.OnClickListener;
-import android.widget.AdapterView;
-import android.widget.AdapterView.OnItemSelectedListener;
-import android.widget.ArrayAdapter;
-import android.widget.Button;
-import android.widget.FrameLayout;
-import android.widget.Spinner;
+import android.widget.EditText;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.septeni.polaris.R;
-import com.septeni.polaris.data.MvPyxisAppInfo;
-import com.septeni.polaris.data.SpinnerMV;
-import com.septeni.polaris.fragment.BaseFragment;
-import com.septeni.polaris.fragment.CustomAudienceFragment;
-import com.septeni.polaris.fragment.OthersFragment;
-import com.septeni.polaris.fragment.PurchaseFragment;
 import com.septeni.polaris.provider.SharePrefs;
 import com.septeni.polaris.utils.LogUtils;
+import com.septeni.polaris.utils.Utility;
 
 public class TestSDKActivity extends FragmentActivity implements OnClickListener {
 
-	private static final String NO_TYPE = "Select MV";
-	private static final String OTHERS_TYPE = "Other MV"; // For active testing.
-	private static final String CUSTOM_AUDIENCE_TYPE = "Custom Audience MV"; // For custom audience testing.
-	private static final String PURCHASE_TYPE = "Purchase MV"; // For purchase testing.
-
 	/* Variable store list mv. */
-	private static final MvPyxisAppInfo MV_APP_INFO_LIEM_TEST_STAGING_201 = new MvPyxisAppInfo(
-			"c2faf3dbae68e153f7e3c2527e6ca75b",// install
-			"d4b9b018a07b59bbd8fb211b6d6e10b5",// active
-			"d27461cbc3b98ba12396061693c5f7d4",// custom audience
-			"64a3e8dc99e08c9fd9a8d07248bce9c6", // purchase
-			"d27461cbc3b98ba12396061693c5f7d4");// app event.
+	/* List MV of PID 186. */
+	private static final String MV_INSTALL_1 = "54ad5fc30b975c155be2db9f3b7a8d2e"; // install 1
+	private static final String MV_INSTALL_3 = "ecc90491076febe4c3fd5e455463cfa9"; // install 3
+	private static final String MV_INSTALL_4 = "edf107fb5c69b3fdd3eb7729448fdd98"; // install 4
+	private static final String MV_INSTALL_5 = "446935140f3321cdf8288d33458a4921"; // install 5
+	private static final String MV_ACTIVE_DAU = "5758a92c94d17208c22702e9f0e35620"; // active DAU.
+	private static final String MV_PURCHASE_1 = "0a8309648e12dcf7768b9a02f6a04e94"; // purchase 1
+	private static final String MV_PURCHASE_3 = "03be221adcc43a190f3fc84369f10521"; // purchase 3
+	private static final String MV_PURCHASE_4 = "18171f13db12005d0fe6ba3af261dca0"; // purchase 4
 
-	private static final MvPyxisAppInfo MV_APP_INFO_YEN_TEST_PRODUCTION_120 = new MvPyxisAppInfo(
-			"ef8a3d8c6db2d81d9f7452e99e8fb32f",// install
-			"11dbb77ea7fddc4ccf0c75542ea318af",// active
-			"815c1727c3fc78a745c90e6413b6cba9",// custom audience
-			"01faa75c33d9b62148764dd895fe23d8", // purchase
-			"815c1727c3fc78a745c90e6413b6cba9");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_YEN_TEST_STAGING_60560 = new MvPyxisAppInfo(
-			"33bbb2bfe7c1ce21091dcdb8f961e3bb",// install
-			"8b81f516f53ae934946547a51f22459d",// active
-			"93987374d446514e0d56282e6f1c9c42",// custom audience
-			"613ef5d9acc3acc6ecbae64471d5d76c", // purchase
-			"93987374d446514e0d56282e6f1c9c42");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_YEN_TEST_STAGING_62294 = new MvPyxisAppInfo(
-			"7542b3dcf8ea3f9571774c726720153c",// install
-			"ba740c7c40aee305bbed20000b9652ba",// active
-			"5afbb9407430320790ffc05f6074105b",// custom audience
-			"7925478c94dcfa2ef56f3c4f014c76dc", // purchase
-			"5afbb9407430320790ffc05f6074105b");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_YEN_TEST_STAGING_151 = new MvPyxisAppInfo(
-			"64ceb90493f82a0e0a25e855e5d9550f",// install
-			"73fc81f0c8f77c04e03a86c87ca27e16",// active
-			"89c839b575bf6481d2453c986e925490",// custom audience
-			"f2d52eea464cc2e29c31ceb188e72934", // purchase
-			"89c839b575bf6481d2453c986e925490");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_YEN_TEST_STAGING_174 = new MvPyxisAppInfo(
-			"4bfdd023f43ea8a50d06e57d33f91ba6",// install
-			"b52a1a262b820774ab25ba027ec97dc9",// active
-			"510f8fc73cd7658569a35c1a6ea2ba5d",// custom audience
-			"0828419cdb48628f3b3480c2b6512571", // purchase
-			"510f8fc73cd7658569a35c1a6ea2ba5d");// app event.
-	private static final MvPyxisAppInfo MV_APP_INFO_YEN_TEST_STAGING_61 = new MvPyxisAppInfo(
-			"0f72cfceb405ef9eb4e9344032414280",// install
-			"5ab345b9d7549810b66f6431c0ec309d",// active
-			"",// custom audience
-			"7dee4d46cb21ed8ed5f32016a2a3e116", // purchase
-			"");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_HAI_ANH_TEST_STAGING_60116 = new MvPyxisAppInfo(
-			"a44da247c848d6ae3873a41db5ff0f56",// install
-			"5a323472235cbabef5e582e26adcbcbf",// active
-			"ed1c0a6f169656680b93bce05ef7ec11",// custom audience
-			"6e94713b20721a88b317671683df0e7a", // purchase
-			"ed1c0a6f169656680b93bce05ef7ec11");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_HAI_ANH_TEST_STAGING_62304 = new MvPyxisAppInfo(
-			"56f7989282fd02c4c99dbd922b906d1a",// install
-			"9b47645379d025231f287394faf7bcd9",// active
-			"ef05e403476e674d57716f0ef0423e58",// custom audience
-			"faebb20b94709d40a98d283367228dbb", // purchase
-			"ef05e403476e674d57716f0ef0423e58");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_HAI_ANH_TEST_STAGING_171 = new MvPyxisAppInfo(
-			"7ee4ce4521ad003b2fe02dc0183c7045",// install
-			"55926571a903ca408a32c8dcd3d7f79b",// active
-			"41ea758840e6c5203612ee827f306f07",// custom audience
-			"04ad018ca38bb2f77ef1e3332ea7bd13", // purchase
-			"41ea758840e6c5203612ee827f306f07");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_CAO_HANG_TEST_STAGING_175 = new MvPyxisAppInfo(
-			"d4c5a163ac2eee421bd4b3de1b7a761d",// install
-			"f046fca97ef4b280f15b0ef285627e6a",// active
-			"525e6128575efdf07a84ebc40efd969b",// custom audience
-			"88989b4716f1bb4dc5ae936c76409af4", // purchase
-			"525e6128575efdf07a84ebc40efd969b");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_CAO_HANG_TEST_STAGING_177 = new MvPyxisAppInfo(
-			"5eb28736c45e89e71697fb0997b8b133",// install
-			"73a8289c2ba8ad577514e9c6a3abe431",// active
-			"ba5bd9e6988beee610e4f078e6db07c7",// custom audience
-			"f43e39e8a861a8330c7337514fa3c68f", // purchase
-			"ba5bd9e6988beee610e4f078e6db07c7");// app event.
-
-	private static final MvPyxisAppInfo MV_APP_INFO_CAO_HANG_TEST_STAGING_173 = new MvPyxisAppInfo(
-			"98bcd46e822e05245513c27b4b93cad8",// install
-			"0320fcc3f726654d8f9fc913261e80b7",// active
-			"43b14e70c6397f8c6c9cb2d122848e92",// custom audience
-			"cadedb768b0a21bccb1a2942611aa5a3", // purchase
-			"43b14e70c6397f8c6c9cb2d122848e92");// app event.
-
-	private MvPyxisAppInfo mvAppTest = MV_APP_INFO_YEN_TEST_STAGING_174; // Define which list mv will use.
-	/* For mv spinner adapter. */
-	private SpinnerMV[] mSpinnerMvArray = new SpinnerMV[] { new SpinnerMV(NO_TYPE, ""),
-			new SpinnerMV(OTHERS_TYPE, mvAppTest.getInAppEventMV()),
-			new SpinnerMV(PURCHASE_TYPE, mvAppTest.getInAppPurchaseMV()),
-			new SpinnerMV(CUSTOM_AUDIENCE_TYPE, mvAppTest.getInAppCustomAudienceMV()) };
+	/* List MV of PID 179. */
+	// private static final String MV_INSTALL_1 = "1818ff3e2e23f5e81960333aeed64e5c"; // install 1
+	// private static final String MV_INSTALL_3 = "acb1f31d647bea6ae0052af3f30bdfa6"; // install 3
+	// private static final String MV_INSTALL_4 = "6173c63104ba142e6dcbdab3aa09b905"; // install 4
+	// private static final String MV_INSTALL_5 = "7379726fcebe82df4702acc903dd5372"; // install 5
+	// private static final String MV_ACTIVE_DAU = "e66e412194ca5935e9332f855af1facf"; // active DAU.
+	// private static final String MV_PURCHASE_1 = "23f23432adb822dbde9ee14a654593b4"; // purchase 1
+	// private static final String MV_PURCHASE_3 = "04c97ad4355694ccc1381a123d4cc96d"; // purchase 3
+	// private static final String MV_PURCHASE_4 = "154f9138865aeeddda6adb396399d00b"; // purchase 4
 
 	private SharePrefs mSharePrefs = SharePrefs.getInstance();
-	private String mType = ""; // Type of mv.
+	private Handler mHandler;
+	private int mSUID = 0;
 
 	// ======================================================
 	// View elements
 	// ======================================================
-	private FrameLayout mFlContent;
-	private Spinner mSpMv;
-	private Button mBtnSend;
-	private Button mBtnDelDatabase;
-	private Button mBtnExit;
+	private ProgressDialog mProgressDialog;
+	private AlertDialog mAlertDialog;
 	private TextView mTvDescription;
-	private BaseFragment mFragmentContent;
+	private TextView mTvConversionTest;
+	private TextView mTvInstallTest;
+	private TextView mTvOnlineOfflineTest;
+	private TextView mTvDuplicationTest;
+	private TextView mTvPurchase;
+	private TextView mTvNormalMode;
+	private TextView mTvStart;
+	private EditText mEtVerify;
+	private EditText mEtSuid;
+	private EditText mEtSales;
+	private EditText mEtOthers;
+	private EditText mEtEmail;
+	private EditText mEtPhone;
+	private EditText mEtFUI;
+	private EditText mEtFAI;
 
 	/**
 	 * Define view will be used.
 	 */
 	private void initializeView() {
-		mFlContent = (FrameLayout) findViewById(R.id.flContent);
 		mTvDescription = (TextView) findViewById(R.id.tvDescription);
-		mBtnSend = (Button) findViewById(R.id.btnSend);
-		mBtnDelDatabase = (Button) findViewById(R.id.btnDeleteDatabase);
-		mBtnExit = (Button) findViewById(R.id.btnExit);
-		mSpMv = (Spinner) findViewById(R.id.spListMv);
-		ArrayAdapter<SpinnerMV> adapter = new ArrayAdapter<SpinnerMV>(this,
-				android.R.layout.simple_spinner_dropdown_item, mSpinnerMvArray);
-		mSpMv.setAdapter(adapter);
+		mTvConversionTest = (TextView) findViewById(R.id.tvConversionTest);
+		mTvInstallTest = (TextView) findViewById(R.id.tvInstallTest);
+		mTvOnlineOfflineTest = (TextView) findViewById(R.id.tvOnlineOfflineTest);
+		mTvDuplicationTest = (TextView) findViewById(R.id.tvDuplicationTest);
+		mTvPurchase = (TextView) findViewById(R.id.tvPurchase);
+		mTvNormalMode = (TextView) findViewById(R.id.tvNormalMode);
+		mTvStart = (TextView) findViewById(R.id.tvStart);
+		mEtVerify = (EditText) findViewById(R.id.etVerify);
+		mEtSuid = (EditText) findViewById(R.id.etSuid);
+		mEtSales = (EditText) findViewById(R.id.etSales);
+		mEtOthers = (EditText) findViewById(R.id.etOthers);
+		mEtEmail = (EditText) findViewById(R.id.etEmail);
+		mEtPhone = (EditText) findViewById(R.id.etPhone);
+		mEtFUI = (EditText) findViewById(R.id.etFUI);
+		mEtFAI = (EditText) findViewById(R.id.etFAI);
 
-		mBtnSend.setOnClickListener(this);
-		mBtnDelDatabase.setOnClickListener(this);
-		mBtnExit.setOnClickListener(this);
+		/* Set click event. */
+		mTvConversionTest.setOnClickListener(this);
+		mTvInstallTest.setOnClickListener(this);
+		mTvOnlineOfflineTest.setOnClickListener(this);
+		mTvDuplicationTest.setOnClickListener(this);
+		mTvPurchase.setOnClickListener(this);
+		mTvNormalMode.setOnClickListener(this);
+		mTvStart.setOnClickListener(this);
 
-		// Handler event when select item on spinner.
-		mSpMv.setOnItemSelectedListener(new OnItemSelectedListener() {
-			@Override
-			public void onItemSelected(AdapterView<?> adapterView, View view, int position, long id) {
-				SpinnerMV spinnerMv = (SpinnerMV) adapterView.getItemAtPosition(position);
-				mBtnSend.setVisibility(View.VISIBLE); // Show send button to send tracking.
-				if (OTHERS_TYPE.equals(spinnerMv.getType())) { // Others mv.
-					/*
-					 * Type tracking is OTHERS_TYPE.
-					 * Set description.
-					 * OthersFragment will be used.
-					 */
-					mType = OTHERS_TYPE;
-					mTvDescription.setText(R.string.description_others_test);
-					mFlContent.setVisibility(View.VISIBLE);
-					mFragmentContent = new OthersFragment();
-				} else if (CUSTOM_AUDIENCE_TYPE.equals(spinnerMv.getType())) { // Custom audience mv.
-					/*
-					 * Type tracking is CUSTOM_AUDIENCE_TYPE.
-					 * Set description.
-					 * CustomAudienceFragment will be used.
-					 */
-					mType = CUSTOM_AUDIENCE_TYPE;
-					mTvDescription.setText(R.string.description_notification_test);
-					mFlContent.setVisibility(View.VISIBLE);
-					mFragmentContent = new CustomAudienceFragment();
-				} else if (PURCHASE_TYPE.equals(spinnerMv.getType())) { // Purchase mv.
-					/*
-					 * Type tracking is PURCHASE_TYPE.
-					 * Set description.
-					 * PurchaseFragment will be used.
-					 */
-					mType = PURCHASE_TYPE;
-					mTvDescription.setText(R.string.description_purchase_test);
-					mFlContent.setVisibility(View.VISIBLE);
-					mFragmentContent = new PurchaseFragment();
-				} else { // No mv is selected, hide send button, layout content and reset description.
-					mFlContent.setVisibility(View.GONE);
-					mBtnSend.setVisibility(View.GONE);
-					mTvDescription.setText("");
-					mFragmentContent = null;
-				}
-				if (mFragmentContent != null) {
-					getSupportFragmentManager().beginTransaction().replace(R.id.flContent, mFragmentContent).commit();
-				}
-			}
-
-			@Override
-			public void onNothingSelected(AdapterView<?> adapterView) {
-			}
-		});
+		/* Update view state. */
+		updateView();
 	}
 
 	/**
-	 * Track first installation.
+	 * Update view state.
 	 */
-	private void initAndTrackInstall() {
-		LogUtils.logInfo("Init Track install");
+	private void updateView() {
+		/* Update testing type. */
+		int type = mSharePrefs.getType();
+		mTvConversionTest.setSelected(false);
+		mTvInstallTest.setSelected(false);
+		mTvOnlineOfflineTest.setSelected(false);
+		mTvDuplicationTest.setSelected(false);
+		switch (type) {
+		case SharePrefs.CONVERSION_TESTING:
+			mTvConversionTest.setSelected(true);
+			break;
+		case SharePrefs.INSTALL_TESTING:
+			mTvInstallTest.setSelected(true);
+			break;
+		case SharePrefs.ONLINE_OFFLINE_TESTING:
+			mTvOnlineOfflineTest.setSelected(true);
+			break;
+		case SharePrefs.DUPLICATION_TESTING:
+			mTvDuplicationTest.setSelected(true);
+			break;
+		default:
+			break;
+		}
+
+		/* Update testing mode. */
+		int mode = mSharePrefs.getMode();
+		if (mode == SharePrefs.NORMAL_MODE) {
+			mTvNormalMode.setSelected(true);
+		} else {
+			mTvNormalMode.setSelected(false);
+		}
+	}
+
+	/**
+	 * Initialize SDK.
+	 */
+	private void initializeSDK() {
+		LogUtils.logInfo("Init SDK Tracking");
 		PyxisTracking.init(this, getIntent(), "schemea", "com.septeni.polaris");
+		sleepApplication(3000);
+	}
+
+	/**
+	 * Sleep application.
+	 * 
+	 * @param milliseconds
+	 *            pause times.
+	 */
+	private void sleepApplication(long milliseconds) {
 		try {
-			Thread.sleep(3000);
+			Thread.sleep(milliseconds);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
-		// Tracking install.
-		PyxisTracking.trackInstall(mvAppTest.getInstallMV(), null, null, null, null, null);
+	}
+
+	/**
+	 * Track install.
+	 * 
+	 * @param installMV
+	 *            mv to track.
+	 */
+	private void trackInstall(String installMV) {
+		/* Change verify. */
+		changeSDKVerify(false);
+
+		/* Tracking install. */
+		PyxisTracking.trackInstall(installMV, null, null, null, null, null);
+
+		/* Show information about browser: open or not open after track install. */
+		PyxisDBHelper dbHelper = new PyxisDBHelper();
+		HashMap<String, Object> installMap = Utility.selInstall(dbHelper);
+		dbHelper.close();
+
+		String description = "";
+		int isBrowserUped = 0;
+		if (installMap.get("IS_BROWSER_UPED") != null) {
+			isBrowserUped = (Integer) installMap.get("IS_BROWSER_UPED");
+		}
+		if (isBrowserUped == 0) {
+			description = "Browser not open";
+		} else {
+			description = "Browser open";
+		}
+		mTvDescription.setText(description);
 	}
 
 	/**
 	 * Send tracking in-app purchase.
 	 * 
+	 * @param mv
+	 *            mv to track.
+	 * @param suid
+	 *            suid to track.
 	 * @param sales
 	 *            the sales.
+	 * @param volume
+	 *            the volume.
+	 * @param profit
+	 *            the profit.
 	 */
-	private void trackPurchase(int sales) {
-		PyxisTracking.saveTrackApp(mvAppTest.getInAppPurchaseMV(), "", sales, 10, 5, null, AppLimitMode.NONE);
+	private void trackPurchase(String mv, String suid, int sales, int volume, int profit) {
+		PyxisTracking.saveTrackApp(mv, suid, sales, volume, profit, null, AppLimitMode.NONE);
 		PyxisTracking.sendTrackApp();
-		Toast.makeText(getApplicationContext(), "Send purchase tracking.", Toast.LENGTH_SHORT).show();
 	}
 
 	/**
 	 * Send tracking custom audience.
 	 * 
+	 * @param mv
 	 * @param email
 	 * @param phone
 	 * @param fbId
 	 * @param appId
 	 */
-	private void trackCustomAudience(String email, String phone, String fbId, String appId) {
-		PyxisTracking.sendCAParam(mvAppTest.getInAppCustomAudienceMV(), email, phone, fbId, appId);
-		Toast.makeText(getApplicationContext(), "Send custom audience.", Toast.LENGTH_SHORT).show();
+	private void trackCustomAudience(String mv, String email, String phone, String fbId, String appId) {
+		showProgress("Send custom audience ...");
+		PyxisTracking.sendCAParam(mv, email, phone, fbId, appId);
+		executeHandler(new Runnable() {
+			@Override
+			public void run() {
+				if (mProgressDialog != null && mProgressDialog.isShowing()) mProgressDialog.dismiss();
+			}
+		}, 3000);
 	}
 
 	/**
@@ -275,34 +258,858 @@ public class TestSDKActivity extends FragmentActivity implements OnClickListener
 	 */
 	private void trackActive(String mv, String suid, String sales, String volume, String profit, String others,
 			AppLimitMode limitMode) {
-		// Save info to shared preference.
-		mSharePrefs.saveSUID(suid);
-		mSharePrefs.saveSales(sales);
-		mSharePrefs.saveVolume(volume);
-		mSharePrefs.saveProfit(profit);
-		mSharePrefs.saveOthers(others);
-
 		// Send active.
 		PyxisTracking.saveTrackApp(mv, suid, sales, volume, profit, others, limitMode);
 		PyxisTracking.sendTrackApp();
 	}
 
 	/**
-	 * Prepare data to track custom audience.
+	 * Track active DAU.
+	 */
+	private void trackDAU() {
+		/* If verify not generated, need set it. */
+		PyxisDBHelper dbHelper = new PyxisDBHelper();
+		HashMap<String, Object> userMap = Utility.selUser(dbHelper);
+		dbHelper.close();
+		if (TextUtils.isEmpty((String) userMap.get("UUID"))) {
+			changeSDKVerify(false);
+		}
+		trackActive(MV_ACTIVE_DAU, "", "", "", "", "", AppLimitMode.DAU);
+	}
+
+	/**
+	 * Prepare track DAU.<br>
+	 * Only track one time per day.
+	 */
+	private void prepareTrackDAU() {
+		Calendar calendar = Calendar.getInstance();
+		Calendar calendarTrack = Calendar.getInstance();
+		long timeTrackDAU = mSharePrefs.getTrackDAUTime();
+		calendarTrack.setTimeInMillis(timeTrackDAU);
+		if (calendar.get(Calendar.DAY_OF_MONTH) == calendarTrack.get(Calendar.DAY_OF_MONTH)
+				&& calendar.get(Calendar.MONTH) == calendarTrack.get(Calendar.MONTH)
+				&& calendar.get(Calendar.YEAR) == calendarTrack.get(Calendar.YEAR)) {
+			return; // This day already tracked, do nothing.
+		} else {
+			trackDAU();
+			mSharePrefs.setTrackDAUTime(System.currentTimeMillis());
+		}
+	}
+
+	/**
+	 * Prepare data to track CA.
 	 */
 	private void prepareTrackCA() {
-		String email = ((CustomAudienceFragment) mFragmentContent).getEmail();
-		String phoneNumber = ((CustomAudienceFragment) mFragmentContent).getPhoneNumber();
-		String fbUserId = ((CustomAudienceFragment) mFragmentContent).getFBUserId();
-		String appUserId = ((CustomAudienceFragment) mFragmentContent).getAppUserId();
+		/* Get all data. */
+		String em = mEtEmail.getText().toString();
+		String pn = mEtPhone.getText().toString();
+		String fui = mEtFUI.getText().toString();
+		String fai = mEtFAI.getText().toString();
 
-		// If one field is invalid, show toast message.
-		if (TextUtils.isEmpty(email) || TextUtils.isEmpty(phoneNumber) || TextUtils.isEmpty(fbUserId)
-				|| TextUtils.isEmpty(appUserId)) {
-			Toast.makeText(this, R.string.msg_info_some_fields_empty, Toast.LENGTH_SHORT).show();
-		} else { // All fields is valid.
-			trackCustomAudience(email, phoneNumber, fbUserId, appUserId);
+		/* If any data not set, show toast. */
+		if (TextUtils.isEmpty(em) || TextUtils.isEmpty(pn) || TextUtils.isEmpty(fui) || TextUtils.isEmpty(fai)) {
+			Toast.makeText(this, "You must enter em, pn, fui, fai!", Toast.LENGTH_SHORT).show();
+		} else {
+			validateVerify(); // Need verify before track.
+			trackInstall(MV_INSTALL_5);
+			// Track CA.
+			trackCustomAudience(MV_PURCHASE_1, em, pn, fui, fai);
 		}
+	}
+
+	/**
+	 * Prepare data to track purchase.
+	 */
+	private void prepareTrackPurchase() {
+		/* Get all data. */
+		String suid = mEtSuid.getText().toString();
+		String sales = mEtSales.getText().toString();
+		String others = mEtOthers.getText().toString();
+
+		showProgress("Tracking purchase ... ");
+		validateVerify(); // Need verify before track.
+		trackInstall(MV_INSTALL_5);
+		trackActive(MV_PURCHASE_1, suid, sales, "1000", "1000", others, AppLimitMode.NONE);
+		executeHandler(new Runnable() {
+			@Override
+			public void run() {
+				if (mProgressDialog != null && mProgressDialog.isShowing()) mProgressDialog.dismiss();
+			}
+		}, 3000);
+	}
+
+	/**
+	 * If user set verify, set it.
+	 * else, if verify is empty, generate it automatically.
+	 */
+	private void validateVerify() {
+		/* If user does not set verify or verify not generated, need set it. */
+		PyxisDBHelper dbHelper = new PyxisDBHelper();
+		if (TextUtils.isEmpty(mEtVerify.getText().toString())) {
+			HashMap<String, Object> userMap = Utility.selUser(dbHelper);
+			if (TextUtils.isEmpty((String) userMap.get("UUID"))) {
+				changeSDKVerify(false);
+			}
+		} else {
+			Utility.updUser(dbHelper, mEtVerify.getText().toString());
+		}
+		dbHelper.close();
+	}
+
+	/**
+	 * Send install tracking and set next step.<br>
+	 * <ul>
+	 * Track install and purchase. After that, delete SDK database, set next step. Then restart application.
+	 * </ul>
+	 * 
+	 * @param installMV
+	 *            install MV to track.
+	 * @param installNumber
+	 *            current install number.
+	 * @param nextStep
+	 *            next step to set.
+	 */
+	private void trackConversion(String installMV, int installNumber, final int nextStep) {
+		/* Show progress dialog when tracking install. */
+		showProgress("Tracking install" + " " + installNumber + " ...");
+
+		trackInstall(installMV); // Track install.
+
+		/* Task to set next step then delete SDK data. */
+		final Runnable nextStepAndDeleteSDKData = new Runnable() {
+			@Override
+			public void run() {
+				mSharePrefs.setStep(nextStep); // Set next step testing.
+				deleteSDKDataAndRestart(); // Delete SDK data.
+			}
+		};
+
+		/* Task to track purchase and execute nextStepAndDeleteSDKData task . */
+		Runnable trackPurchaseTask = new Runnable() {
+			@Override
+			public void run() {
+				showProgress("Tracking purchase 1 ..."); // Show progress dialog when tracking purchase.
+				trackPurchase(MV_PURCHASE_1, mSUID + "", 1000, 2000, 3000); // Track purchase.
+				executeHandler(nextStepAndDeleteSDKData, 5000); // Execute nextStepAndDeleteSDKData.
+			}
+		};
+
+		/* Execute task. */
+		executeHandler(trackPurchaseTask, 5000);
+	}
+
+	/**
+	 * Change wifi on or off.
+	 * 
+	 * @param isTurnOn
+	 *            is true if want to turn wifi on, else set is false.
+	 */
+	private boolean changeNetworkState(boolean isTurnOn) {
+		try {
+			/* Show progress dialog turn wifi on or off. */
+			if (isTurnOn) {
+				showProgress("Set Wifi on ..."); // Show dialog when turn wifi on.
+			} else {
+				showProgress("Set Wifi off ..."); // Show dialog when turn wifi off.
+			}
+
+			/* Turn wifi on or off. */
+			WifiManager wifiManager = (WifiManager) this.getSystemService(Context.WIFI_SERVICE);
+			wifiManager.setWifiEnabled(isTurnOn);
+
+			/* If turn on wifi, wait until wifi connected. */
+			if (isTurnOn) {
+				while (!isNetworkOnline()) {
+					/* Do nothing when wifi has not connected. */
+					LogUtils.logInfo("Wifi not connected.");
+				}
+			}
+			return true; // Return change wifi state successfully.
+		} catch (Exception e) { // Handle exception.
+			e.printStackTrace();
+			return false;
+		}
+	}
+
+	/**
+	 * Check wifi network is online or offline.
+	 * 
+	 * @return true if wifi is online, else false.
+	 */
+	public boolean isNetworkOnline() {
+		boolean status = false; // Default state.
+		try {
+			/* Check network state. */
+			ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+			NetworkInfo netInfo = cm.getNetworkInfo(ConnectivityManager.TYPE_WIFI);
+			if (netInfo != null && netInfo.getState() == NetworkInfo.State.CONNECTED) {
+				status = true;
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+			return false;
+		}
+		return status;
+
+	}
+
+	/**
+	 * Change SDK verify.
+	 * 
+	 * @param showProgress
+	 *            true if want to show progress.
+	 */
+	private void changeSDKVerify(boolean showProgress) {
+		/* Show progress dialog when changing SDK verify if need. */
+		if (showProgress) showProgress("Changing verify ...");
+		String pyxisVerify = Utility.generateUuid();
+		PyxisDBHelper dbHelper = new PyxisDBHelper();
+		Utility.updUser(dbHelper, pyxisVerify);
+		dbHelper.close();
+	}
+
+	/**
+	 * Change SUID.
+	 */
+	private void changeSUID() {
+		/* Show progress when changing SUID. */
+		showProgress("Changing SUID ...");
+		mSUID++; // Change SUID.
+	}
+
+	/**
+	 * Start duplication testing in flow 1:<br>
+	 * <ul>
+	 * Install 1 > Purchase 1 > Purchase 1 > Purchase 2 > Purchase 2.<br>
+	 * Then call flow 2 automatically.
+	 * </ul>
+	 */
+	private void beginDuplicationFlow1() {
+		/* Task to next flow. */
+		final Runnable nextFlow = new Runnable() {
+			@Override
+			public void run() {
+				beginDuplicationFlow2(); // Begin flow 2.
+			}
+		};
+
+		/* Task for track purchase 1 again then execute taskTrackPurchase2. */
+		final Runnable taskTrackPurchase1Again = new Runnable() {
+			@Override
+			public void run() {
+				showProgress("Tracking purchase 1 again ..."); // Show progress dialog when tracking purchase.
+				trackPurchase(MV_PURCHASE_1, mSUID + "", 1000, 2000, 3000); // Track purchase.
+				executeHandler(nextFlow, 5000); // Execute next flow.
+			}
+		};
+
+		/* Task for track purchase 1 then execute taskTrackPurchase1Again. */
+		Runnable taskTrackPurchase1 = new Runnable() {
+			@Override
+			public void run() {
+				showProgress("Tracking purchase 1 ..."); // Show progress dialog when tracking purchase.
+				trackPurchase(MV_PURCHASE_1, mSUID + "", 1000, 2000, 3000); // Track purchase.
+				executeHandler(taskTrackPurchase1Again, 5000); // Execute taskTrackPurchase1Again.
+			}
+		};
+
+		/* Show progress dialog when tracking install. */
+		showProgress("Tracking install 1 ...");
+
+		trackInstall(MV_INSTALL_1); // Track install.
+
+		executeHandler(taskTrackPurchase1, 5000);
+	}
+
+	/**
+	 * Start duplication testing in flow 2:<br>
+	 * <ul>
+	 * Change verify > Purchase 3 > Purchase 3.<br>
+	 * Then call flow 3 automatically.
+	 * </ul>
+	 */
+	private void beginDuplicationFlow2() {
+		/* Change verify. */
+		changeSDKVerify(true);
+
+		/* Task to next flow. */
+		final Runnable nextFlow = new Runnable() {
+			@Override
+			public void run() {
+				beginDuplicationFlow3(); // Next flow.
+			}
+		};
+
+		/* Task to track purchase 3 again. */
+		final Runnable trackPurchase3Again = new Runnable() {
+			@Override
+			public void run() {
+				showProgress("Tracking purchase 3 again ..."); // Show progress dialog when tracking purchase 3.
+				trackPurchase(MV_PURCHASE_3, mSUID + "", 1000, 2000, 3000); // Track purchase 3 again.
+				executeHandler(nextFlow, 5000); // Execute next flow.
+			}
+		};
+
+		/* Task to track purchase. */
+		Runnable trackPurchase3 = new Runnable() {
+			@Override
+			public void run() {
+				/* Show progress dialog when tracking purchase 3. */
+				showProgress("Tracking purchase 3 ...");
+
+				trackPurchase(MV_PURCHASE_3, mSUID + "", 1000, 2000, 3000); // Track purchase 3.
+
+				/* After track purchase 3, track purchase 3 again and next flow. */
+				executeHandler(trackPurchase3Again, 5000);
+			}
+		};
+
+		executeHandler(trackPurchase3, 3000);
+	}
+
+	/**
+	 * Start duplication testing in flow 3:<br>
+	 * <ul>
+	 * Change verify > Purchase 3.<br>
+	 * Then call flow 4 automatically.
+	 * </ul>
+	 */
+	private void beginDuplicationFlow3() {
+		/* Change verify. */
+		changeSDKVerify(true);
+
+		/* Task to next flow. */
+		final Runnable nextFlow = new Runnable() {
+			@Override
+			public void run() {
+				beginDuplicationFlow4();
+			}
+		};
+
+		/* Task to track purchase 3. */
+		Runnable trackPurchase3 = new Runnable() {
+			@Override
+			public void run() {
+				/* Show progress dialog when tracking purchase 3. */
+				showProgress("Tracking purchase 3 ...");
+
+				trackPurchase(MV_PURCHASE_3, mSUID + "", 1000, 2000, 3000); // Track purchase 3.
+
+				/* Next flow. */
+				executeHandler(nextFlow, 5000);
+			}
+		};
+
+		executeHandler(trackPurchase3, 3000);
+	}
+
+	/**
+	 * Start duplication testing in flow 4:<br>
+	 * <ul>
+	 * Change suid > Purchase 4 > Purchase 4.<br>
+	 * Then call flow 5 automatically.
+	 * </ul>
+	 */
+	private void beginDuplicationFlow4() {
+		/* Change SUID. */
+		changeSUID();
+
+		/* Task to next flow. */
+		final Runnable nextFlow = new Runnable() {
+			@Override
+			public void run() {
+				beginDuplicationFlow5(); // Next flow.
+			}
+		};
+
+		/* Task to track purchase 4 again then next flow. */
+		final Runnable trackPurchase4AgainAndNextFlow = new Runnable() {
+			@Override
+			public void run() {
+				/* Show progress when tracking purchase 4. */
+				showProgress("Tracking purchase 4 again ...");
+				trackPurchase(MV_PURCHASE_4, mSUID + "", 1000, 2000, 3000); // Track purchase 4.
+				executeHandler(nextFlow, 5000); // Execute next flow.
+			}
+		};
+
+		/* Task begin track purchase 4. */
+		Runnable trackPurchase4 = new Runnable() {
+			@Override
+			public void run() {
+				/* Show progress when tracking purchase 4. */
+				showProgress("Tracking purchase 4 ...");
+				trackPurchase(MV_PURCHASE_4, mSUID + "", 1000, 2000, 3000); // Track purchase 4.
+				executeHandler(trackPurchase4AgainAndNextFlow, 5000); // Execute trackPurchase4AgainAndNextFlow task.
+			}
+		};
+		executeHandler(trackPurchase4, 3000);
+	}
+
+	/**
+	 * Start duplication testing in flow 5:<br>
+	 * <ul>
+	 * Change suid > Purchase 4 > Uninstall.<br>
+	 * Then reset step.
+	 * </ul>
+	 */
+	private void beginDuplicationFlow5() {
+		/* Change SUID. */
+		changeSUID();
+
+		/* Task to uninstall applicaton and reset step. */
+		final Runnable uninstallAndResetStep = new Runnable() {
+			@Override
+			public void run() {
+				mSharePrefs.setStep(SharePrefs.PREPARE_STEP); // Reset step.
+				deleteSDKDataAndRestart(); // Uninstall.
+			}
+		};
+
+		/* Task to track purchase 4 and finish test. */
+		Runnable trackPurchase4 = new Runnable() {
+			@Override
+			public void run() {
+				showProgress("Tracking purchase 4 ..."); // Show progress dialog when tracking purchase 4.
+				trackPurchase(MV_PURCHASE_4, mSUID + "", 1000, 2000, 3000); // Track purchase.
+				executeHandler(uninstallAndResetStep, 5000); // Execute uninstallAndResetStep task.
+			}
+		};
+		executeHandler(trackPurchase4, 3000);
+	}
+
+	/**
+	 * Show alert request user update application to test install tracking after update.
+	 */
+	private void showAlertRequestUpdateApp() {
+		if (mAlertDialog == null) {
+			AlertDialog.Builder alertBuilder = new AlertDialog.Builder(this);
+			alertBuilder.setTitle("Update version");
+			alertBuilder.setMessage("To test this \"Update version\" case, please update application!");
+			alertBuilder.setCancelable(false);
+			alertBuilder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
+				public void onClick(DialogInterface dialog, int id) {
+					dialog.cancel();
+				}
+			});
+
+			mAlertDialog = alertBuilder.create();
+		}
+		mAlertDialog.show();
+	}
+
+	/**
+	 * Work with case 1: conversion testing. <br>
+	 * Workflow:<br>
+	 * <ul>
+	 * <li>Step 1: Install1 > Purchase1 > Uninstall.
+	 * <li>Step 2: Install3 > Purchase1 > Uninstall.
+	 * <li>Step 3: Install4 > Purchase1 > Uninstall.
+	 * <li>Step 4: Install5 > Purchase1.
+	 * </ul>
+	 */
+	private void conversionTesting() {
+		/* Get testing step from preferences to work. */
+		int step = mSharePrefs.getStep();
+		switch (step) {
+		case SharePrefs.FIRST_STEP: // Track install 1 and purchase.
+			trackConversion(MV_INSTALL_1, 1, SharePrefs.SECOND_STEP);
+			break;
+		case SharePrefs.SECOND_STEP: // Track install 3 and purchase.
+			trackConversion(MV_INSTALL_3, 3, SharePrefs.THIRD_STEP);
+			break;
+		case SharePrefs.THIRD_STEP: // Track install 4 and purchase.
+			trackConversion(MV_INSTALL_4, 4, SharePrefs.FOURTH_STEP);
+			break;
+		case SharePrefs.FOURTH_STEP: // Track install 5 and purchase.
+			trackConversion(MV_INSTALL_5, 5, SharePrefs.PREPARE_STEP);
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * Work with case 2: install testing. <br>
+	 * Workflow:<br>
+	 * <ul>
+	 * <li>Step 1: Install1 > Move to background > Launch.
+	 * <li>Step 2: Uninstall.
+	 * <li>Step 3: Install1 > Kill process > Launch.
+	 * <li>Step 4: Uninstall.
+	 * <li>Step 5: Install1 > Update version > Launch.
+	 * </ul>
+	 */
+	private void installTesting() {
+		/* Get testing step from preferences to work. */
+		int step = mSharePrefs.getStep();
+		switch (step) {
+		case SharePrefs.FIRST_STEP:
+			/* Show progress dialog when tracking install. */
+			showProgress("Tracking install 1 ...");
+
+			trackInstall(MV_INSTALL_1); // Track install.
+
+			/* Set next step then move application to background and relaunch. */
+			executeHandler(new Runnable() {
+				@Override
+				public void run() {
+					mSharePrefs.setStep(SharePrefs.SECOND_STEP); // Set next step.
+					moveToBackgroundAndRelaunch(); // Move application to background and relaunch.
+				}
+			}, 5000);
+			break;
+		case SharePrefs.SECOND_STEP:
+			mSharePrefs.setStep(SharePrefs.THIRD_STEP); // Set next step.
+			deleteSDKDataAndRestart(); // Delete SDK data and restart application.
+			break;
+		case SharePrefs.THIRD_STEP:
+			/* Show progress dialog when tracking install. */
+			showProgress("Tracking install 1 ...");
+
+			trackInstall(MV_INSTALL_1); // Track install.
+
+			/* Set next step then kill process and relaunch. */
+			executeHandler(new Runnable() {
+				@Override
+				public void run() {
+					mSharePrefs.setStep(SharePrefs.FOURTH_STEP); // Set next step.
+					killProcessAndRelaunch(); // Kill process and relaunch.
+				}
+			}, 5000);
+			break;
+		case SharePrefs.FOURTH_STEP:
+			mSharePrefs.setStep(SharePrefs.FIFTH_STEP); // Set next step.
+			deleteSDKDataAndRestart(); // Delete SDK data and restart application.
+			break;
+		case SharePrefs.FIFTH_STEP:
+			/* Get application version. */
+			String version = "1.0";
+			try {
+				PackageInfo pInfo = getPackageManager().getPackageInfo(getPackageName(), 0);
+				version = pInfo.versionName;
+			} catch (Exception e) {
+				e.printStackTrace();
+				LogUtils.logError(e.getMessage());
+			}
+
+			if ("1.1".equals(version)) { // Test with version updated.
+				showProgress("Finish install testing ...");
+
+				/* Set reset step then delete SDK data and restart application. */
+				Runnable resetStep = new Runnable() {
+					@Override
+					public void run() {
+						mSharePrefs.setStep(SharePrefs.PREPARE_STEP); // Set next step.
+						deleteSDKDataAndRestart(); // Delete SDK data and restart application.
+					}
+				};
+
+				executeHandler(resetStep, 3000);
+			} else {
+				/* Show progress dialog when tracking install. */
+				showProgress("Tracking install 1 ...");
+
+				trackInstall(MV_INSTALL_1); // Track install.
+
+				/* Prepare update application version. */
+				executeHandler(new Runnable() {
+					@Override
+					public void run() {
+						// Show alert to request user update application.
+						if (mProgressDialog != null && mProgressDialog.isShowing()) mProgressDialog.dismiss();
+						showAlertRequestUpdateApp();
+					}
+				}, 5000);
+			}
+
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * Work with case 3: online/offline testing. <br>
+	 * Workflow:<br>
+	 * <ul>
+	 * <li>Step 1: Offline > Install1 > Purchase1 > Kill process > Launch.
+	 * <li>Step 2: Online > Relaunch.
+	 * <li>Step 3: Uninstall.
+	 * <li>Step 4: Install1 > Offline > Purchase 1 > Online > Purchase 1.
+	 * </ul>
+	 */
+	private void onlineOfflineTesting() {
+		/* Get testing step from preferences to work. */
+		int step = mSharePrefs.getStep();
+		switch (step) {
+		case SharePrefs.FIRST_STEP:
+			/* Turn off wifi. */
+			changeNetworkState(false);
+
+			/* Task to set next step then kill process and relaunch. */
+			final Runnable nextStepAndKillProcess = new Runnable() {
+				@Override
+				public void run() {
+					mSharePrefs.setStep(SharePrefs.SECOND_STEP); // Set next step.
+					killProcessAndRelaunch(); // Kill process and relaunch.
+				}
+			};
+
+			/* Task to track purchase then execute nextStepAndKillProcess task. */
+			final Runnable trackPurchaseAndKillProcess = new Runnable() {
+				@Override
+				public void run() {
+					showProgress("Tracking purchase 1 ..."); // Show progress dialog when tracking purchase.
+					trackPurchase(MV_PURCHASE_1, mSUID + "", 1000, 2000, 3000); // Track purchase.
+					executeHandler(nextStepAndKillProcess, 5000); // Execute nextStepAndKillProcess task.
+				}
+			};
+
+			/* Task to track install and execute trackPurchaseAndKillProcess task. */
+			Runnable trackInstallFirstStep = new Runnable() {
+				@Override
+				public void run() {
+					showProgress("Tracking install 1 ..."); // Show progress dialog when tracking install.
+					trackInstall(MV_INSTALL_1); // Track install.
+					executeHandler(trackPurchaseAndKillProcess, 5000); // Execute trackPurchaseAndKillProcess task.
+				}
+			};
+
+			/* Begin testing in this step. */
+			executeHandler(trackInstallFirstStep, 5000);
+			break;
+		case SharePrefs.SECOND_STEP:
+			/* Turn on wifi. */
+			changeNetworkState(true);
+
+			/* Set next step then move application to background and relaunch. */
+			executeHandler(new Runnable() {
+				@Override
+				public void run() {
+					mSharePrefs.setStep(SharePrefs.THIRD_STEP); // Set next step.
+					moveToBackgroundAndRelaunch(); // Move application to background and relaunch.
+				}
+			}, 5000);
+			break;
+		case SharePrefs.THIRD_STEP:
+			mSharePrefs.setStep(SharePrefs.FOURTH_STEP); // Set next step.
+			deleteSDKDataAndRestart(); // Delete SDK data and restart application.
+			break;
+		case SharePrefs.FOURTH_STEP:
+			/* Show progress dialog when tracking install. */
+			showProgress("Traking install 1 ...");
+
+			trackInstall(MV_INSTALL_1); // Track install.
+
+			/* Task to finish step then delete application and relaunch. */
+			final Runnable finishStepAndDeleteSDKData = new Runnable() {
+				@Override
+				public void run() {
+					mSharePrefs.setStep(SharePrefs.PREPARE_STEP); // Set next step.
+					deleteSDKDataAndRestart(); // Delete SDK data and restart application.
+				}
+			};
+
+			/* Task to track purchase then finish this step. */
+			final Runnable trackPurchaseAndFinish = new Runnable() {
+				@Override
+				public void run() {
+					showProgress("Tracking purchase 1 ..."); // Show progress dialog when tracking purchase.
+					trackPurchase(MV_PURCHASE_1, mSUID + "", 1000, 2000, 3000); // Track purchase.
+					executeHandler(finishStepAndDeleteSDKData, 5000); // Execute finishStepAndDeleteSDKData task.
+				}
+			};
+
+			/* Task to turn on wifi and track purchase. */
+			final Runnable turnOnWifiAndTrackPurchase = new Runnable() {
+				@Override
+				public void run() {
+					changeNetworkState(true); // Turn on wifi.
+					executeHandler(trackPurchaseAndFinish, 5000); // Execute trackPurchaseAndFinish task.
+				}
+			};
+
+			/* Task to track purchase then execute turnOnWifiAndTrackPurchase task. */
+			final Runnable trackPurchaseThenTurnOnWifi = new Runnable() {
+				@Override
+				public void run() {
+					showProgress("Tracking purchase 1 ..."); // Show progress dialog when tracking purchase.
+					trackPurchase(MV_PURCHASE_1, mSUID + "", 1000, 2000, 3000); // Track purchase.
+					executeHandler(turnOnWifiAndTrackPurchase, 5000); // Execute turnOnWifiAndTrackPurchase task.
+				}
+			};
+
+			/* Task to turn off wifi and track purchase. */
+			Runnable turnOffWifiAndTrackPurchase = new Runnable() {
+				@Override
+				public void run() {
+					changeNetworkState(false); // Turn off wifi.
+					executeHandler(trackPurchaseThenTurnOnWifi, 5000); // Execute trackPurchaseThenTurnOnWifi task.
+				}
+			};
+
+			/* Begin testing in this test. */
+			executeHandler(turnOffWifiAndTrackPurchase, 5000);
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * Work with case 5: duplication testing. <br>
+	 * Workflow:<br>
+	 * <ul>
+	 * <li>First: Install 1 > Purchase 1 > Purchase 1 > Purchase 2 > Purchase 2.
+	 * <li>Then: Change verify > Purchase 3 > Purchase 3.
+	 * <li>Then: Change verify > Purchase 3.
+	 * <li>Then: Change suid > Purchase 4 > Purchase 4.
+	 * <li>Then: Change suid > Purchase 4 > Uninstall.
+	 * </ul>
+	 */
+	private void duplicationTesting() {
+		/* Get testing step from preferences to work. */
+		int step = mSharePrefs.getStep();
+		switch (step) {
+		case SharePrefs.FIRST_STEP:
+			beginDuplicationFlow1();
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * Prepare relaunch application.
+	 * 
+	 * @param milliseconds
+	 *            application will relaunch after this time (in milliseconds).
+	 */
+	private void prepareRelaunch(long milliseconds) {
+		Intent intentApp = new Intent(this, TestSDKActivity.class);
+		PendingIntent intent = PendingIntent.getActivity(this.getBaseContext(), 0, intentApp, getIntent().getFlags());
+		AlarmManager manager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
+		manager.set(AlarmManager.RTC, System.currentTimeMillis() + milliseconds, intent);
+	}
+
+	/**
+	 * Delete SDK database and restart application.
+	 */
+	private void deleteSDKDataAndRestart() {
+		showProgress(getResources().getString(R.string.msg_info_delete_database_and_restart));
+
+		/* Delete SDK database. */
+		String filePath = "/data/data/" + getPackageName() + "/databases/pyxisTracking.db";
+		File file = new File(filePath);
+		if (file.exists()) file.delete();
+
+		File saveFile = new File(Environment.getExternalStorageDirectory().getPath() + "/" + getPackageName() + "/"
+				+ "pyxisTracking.db");
+		if (saveFile.exists()) saveFile.delete();
+
+		/* Restart application. */
+		prepareRelaunch(7000);
+		executeHandler(new Runnable() {
+			@Override
+			public void run() {
+				System.exit(2);
+			}
+		}, 5000);
+	}
+
+	/**
+	 * Move application to background and relaunch.
+	 */
+	private void moveToBackgroundAndRelaunch() {
+		showProgress("Move app to background and relaunch ... ");
+
+		/* Prepare intent to relaunch. */
+		prepareRelaunch(7000);
+
+		/* Back to home (move app to background). */
+		executeHandler(new Runnable() {
+			@Override
+			public void run() {
+				Intent startMain = new Intent(Intent.ACTION_MAIN);
+				startMain.addCategory(Intent.CATEGORY_HOME);
+				startMain.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+				startActivity(startMain);
+			}
+		}, 5000);
+	}
+
+	/**
+	 * Kill app process and relaunch.
+	 */
+	private void killProcessAndRelaunch() {
+		showProgress("Kill application process and relaunch ... ");
+		/* Prepare intent to relaunch. */
+		prepareRelaunch(7000);
+		/* Kill process. */
+		executeHandler(new Runnable() {
+			@Override
+			public void run() {
+				android.os.Process.killProcess(android.os.Process.myPid());
+			}
+		}, 5000);
+	}
+
+	/**
+	 * Start testing.
+	 */
+	private void startTesting() {
+		/* Get testing type is saved in preferences. */
+		int type = mSharePrefs.getType();
+		switch (type) {
+		case SharePrefs.CONVERSION_TESTING:
+			/* Conversion testing. */
+			conversionTesting();
+			break;
+		case SharePrefs.INSTALL_TESTING:
+			/* Install testing. */
+			installTesting();
+			break;
+		case SharePrefs.ONLINE_OFFLINE_TESTING:
+			/* Online/Offline testing. */
+			onlineOfflineTesting();
+			break;
+		case SharePrefs.DUPLICATION_TESTING:
+			/* Duplication testing. */
+			duplicationTesting();
+			break;
+		default:
+			break;
+		}
+	}
+
+	/**
+	 * Show progress dialog with message.
+	 * 
+	 * @param message
+	 *            message to show.
+	 */
+	private void showProgress(String message) {
+		if (mProgressDialog == null) {
+			mProgressDialog = new ProgressDialog(this);
+			mProgressDialog.setCancelable(false);
+			mProgressDialog.setIndeterminate(true);
+		}
+		mProgressDialog.setMessage(message);
+		if (mProgressDialog.isShowing()) mProgressDialog.dismiss();
+		mProgressDialog.show();
+	}
+
+	/**
+	 * Execute handler after delay times.
+	 * 
+	 * @param runnable
+	 *            process to execute.
+	 * @param delayMillis
+	 *            delay times.
+	 */
+	private void executeHandler(Runnable runnable, long delayMillis) {
+		mHandler.postDelayed(runnable, delayMillis);
 	}
 
 	@Override
@@ -313,60 +1120,87 @@ public class TestSDKActivity extends FragmentActivity implements OnClickListener
 
 		initializeView();
 
-		// Initialize track install.
-		initAndTrackInstall();
+		// Initialize SDK.
+		initializeSDK();
 	}
 
 	@Override
 	protected void onResume() {
 		super.onResume();
-		// Track DAU active.
-		// trackActive(mvAppTest.getInAppActiveDauMV(), mSharePrefs.getSUID(), mSharePrefs.getSales(),
-		// mSharePrefs.getVolume(), mSharePrefs.getProfit(), mSharePrefs.getOthers(), AppLimitMode.DAU);
+		LogUtils.logInfo("onResume");
+
+		/* Prepare track DAU. */
+		prepareTrackDAU();
+
+		if (mHandler == null) mHandler = new Handler(); // Initialize handler.
+
+		/* If not in testing workflow, do nothing. */
+		int testingStep = mSharePrefs.getStep();
+		LogUtils.logInfo("Step = " + testingStep);
+		if (testingStep == SharePrefs.PREPARE_STEP) {
+			Toast.makeText(this, "Ready!", Toast.LENGTH_SHORT).show();
+			return;
+		}
+
+		/* Start automatic testing. */
+		startTesting();
+	}
+
+	@Override
+	protected void onPause() {
+		super.onPause();
+
+		/* Dismiss progress dialog and alert dialog when activity pause. */
+		if (mProgressDialog != null && mProgressDialog.isShowing()) mProgressDialog.dismiss();
+		if (mAlertDialog != null && mAlertDialog.isShowing()) mAlertDialog.dismiss();
 	}
 
 	@Override
 	public void onClick(View v) {
-		if (v == mBtnSend) { // Click on Send button.
-			if (OTHERS_TYPE.equals(mType)) { // Tracking with all field.
-				String suid = ((OthersFragment) mFragmentContent).getSUID();
-				String salesStr = ((OthersFragment) mFragmentContent).getSales();
-				String volume = ((OthersFragment) mFragmentContent).getVolume();
-				String profit = ((OthersFragment) mFragmentContent).getProfit();
-				String others = ((OthersFragment) mFragmentContent).getOthers();
-				AppLimitMode limitMode = ((OthersFragment) mFragmentContent).getLimitMode();
-
-				if (limitMode == null) limitMode = AppLimitMode.NONE;
-				Toast.makeText(this, "Send track others", Toast.LENGTH_SHORT).show();
-				trackActive(mvAppTest.getInAppEventMV(), suid, salesStr, volume, profit, others, limitMode);
-			} else if (CUSTOM_AUDIENCE_TYPE.equals(mType)) { // Tracking custom audience.
+		int id = v.getId();
+		switch (id) {
+		case R.id.tvConversionTest: // Choose conversion testing type.
+			mSharePrefs.setMode(SharePrefs.AUTO_MODE);
+			mSharePrefs.setType(SharePrefs.CONVERSION_TESTING);
+			updateView();
+			break;
+		case R.id.tvInstallTest: // Choose install testing type.
+			mSharePrefs.setMode(SharePrefs.AUTO_MODE);
+			mSharePrefs.setType(SharePrefs.INSTALL_TESTING);
+			updateView();
+			break;
+		case R.id.tvOnlineOfflineTest: // Choose online/offline testing type.
+			mSharePrefs.setMode(SharePrefs.AUTO_MODE);
+			mSharePrefs.setType(SharePrefs.ONLINE_OFFLINE_TESTING);
+			updateView();
+			break;
+		case R.id.tvDuplicationTest: // Choose duplication testing type.
+			mSharePrefs.setMode(SharePrefs.AUTO_MODE);
+			mSharePrefs.setType(SharePrefs.DUPLICATION_TESTING);
+			updateView();
+			break;
+		case R.id.tvPurchase: // Choose purchase testing type.
+			prepareTrackPurchase();
+			break;
+		case R.id.tvStart: // Tap on start button.
+			/*
+			 * If in normal mode, track manually.
+			 * else, track automatically.
+			 */
+			if (mSharePrefs.getMode() == SharePrefs.NORMAL_MODE) {
 				prepareTrackCA();
-			} else if (PURCHASE_TYPE.equals(mType)) { // Tracking purchase.
-				int sales = ((PurchaseFragment) mFragmentContent).getSales();
-				int volume = ((PurchaseFragment) mFragmentContent).getVolume();
-				int profit = ((PurchaseFragment) mFragmentContent).getProfit();
-				if (sales > 0 && volume > 0 && profit > 0) { // Has define sale number.
-					trackPurchase(sales);
-				} else { // Not define sale number.
-					Toast.makeText(this, R.string.msg_info_some_fields_empty, Toast.LENGTH_SHORT).show();
-				}
+			} else if (SharePrefs.PREPARE_STEP == mSharePrefs.getStep()) {
+				mSharePrefs.setStep(SharePrefs.FIRST_STEP);
+				startTesting();
 			}
-		} else if (v == mBtnDelDatabase) { // Delete app database.
-			Toast.makeText(this, R.string.msg_info_delete_database, Toast.LENGTH_SHORT).show();
-			String filePath = "/data/data/" + getPackageName() + "/databases/pyxisTracking.db";
-			File file = new File(filePath);
-			if (file.exists()) file.delete();
-
-			File saveFile = new File(Environment.getExternalStorageDirectory().getPath() + "/" + getPackageName() + "/"
-					+ "pyxisTracking.db");
-			if (saveFile.exists()) saveFile.delete();
-			// android.os.Process.killProcess(android.os.Process.myPid());
-			PendingIntent intent = PendingIntent.getActivity(this.getBaseContext(), 0, new Intent(getIntent()), getIntent().getFlags());
-		    AlarmManager manager = (AlarmManager) this.getSystemService(Context.ALARM_SERVICE);
-		    manager.set(AlarmManager.RTC, System.currentTimeMillis() + 2000, intent);
-		    System.exit(2);
-		} else if (v == mBtnExit) { // Exit app.
-			finish();
+			break;
+		case R.id.tvNormalMode: // Tap on normal button.
+			mSharePrefs.setMode(SharePrefs.NORMAL_MODE);
+			mSharePrefs.setType(SharePrefs.UNKNOWN_TYPE);
+			updateView();
+			break;
+		default:
+			break;
 		}
 	}
 }

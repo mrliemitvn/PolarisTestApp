@@ -7,11 +7,31 @@ import android.preference.PreferenceManager;
 public class SharePrefs {
 
 	public static final String DEFAULT_BLANK = "";
-	public static final String SUID = "suid";
-	public static final String SALES = "sales";
-	public static final String VOLUME = "volume";
-	public static final String PROFIT = "profit";
-	public static final String OTHERS = "others";
+	public static final String SUID = "suid"; // Key to save "suid" value.
+	public static final String SALES = "sales"; // Key to save "sales" value.
+	public static final String VOLUME = "volume"; // Key to save "volume" value.
+	public static final String PROFIT = "profit"; // Key to save "profit" value.
+	public static final String OTHERS = "others"; // Key to save "others" value.
+	public static final String TRACK_DAU = "track_dau"; // Key to save time when track DAU.
+	public static final String MODE = "mode"; // Key to save test MODE.
+	public static final String STEP = "step"; // Key to save test STEP.
+	public static final String TYPE = "type"; // Key to save test TYPE.
+	public static final int UNKNOWN_MODE = 0; // Unknown testing mode.
+	public static final int AUTO_MODE = 1; // Auto mode.
+	public static final int NORMAL_MODE = 2; // Normal mode.
+	public static final int PREPARE_STEP = 0; // Prepare step.
+	public static final int FIRST_STEP = 1; // First step.
+	public static final int SECOND_STEP = 2; // Second step.
+	public static final int THIRD_STEP = 3; // Third step.
+	public static final int FOURTH_STEP = 4; // Fourth step.
+	public static final int FIFTH_STEP = 5; // Fifth step.
+	public static final int UNKNOWN_TYPE = 0; // Unknown testing type.
+	public static final int CONVERSION_TESTING = 1; // Conversion testing.
+	public static final int INSTALL_TESTING = 2; // Install testing.
+	public static final int ONLINE_OFFLINE_TESTING = 3; // Online/Offline testing.
+	public static final int DUPLICATION_TESTING = 4; // Duplication testing.
+	public static final int STATE_ON = 1; // State is on.
+	public static final int STATE_OFF = 0; // State is off.
 
 	private static SharePrefs instance = new SharePrefs();
 	private SharedPreferences sharedPreferences;
@@ -81,6 +101,31 @@ public class SharePrefs {
 	 */
 	public int get(String key, int _defValue) {
 		return sharedPreferences.getInt(key, _defValue);
+	}
+
+	/**
+	 * Save long value to shared preferences.
+	 * 
+	 * @param key
+	 *            The name of the preference to modify.
+	 * @param value
+	 *            The new value for the preference
+	 */
+	public void save(String key, long value) {
+		sharedPreferences.edit().putLong(key, value).commit();
+	}
+
+	/**
+	 * Retrieve a long value from the preferences.
+	 * 
+	 * @param key
+	 *            The name of the preference to retrieve.
+	 * @param _defValue
+	 *            Value to return if this preference does not exist.
+	 * @return Returns the preference value if it exists, or defValue
+	 */
+	public long get(String key, long _defValue) {
+		return sharedPreferences.getLong(key, _defValue);
 	}
 
 	/**
@@ -201,5 +246,81 @@ public class SharePrefs {
 	 */
 	public String getOthers() {
 		return get(OTHERS, DEFAULT_BLANK);
+	}
+
+	/**
+	 * Save time when track DAU in preferences.
+	 * 
+	 * @param timeInMillis
+	 *            time in milliseconds to save.
+	 */
+	public void setTrackDAUTime(long timeInMillis) {
+		save(TRACK_DAU, timeInMillis);
+	}
+
+	/**
+	 * Get time when track DAU from preferences.
+	 * 
+	 * @return time in milliseconds when track DAU from preferences.
+	 */
+	public long getTrackDAUTime() {
+		return get(TRACK_DAU, (long) 0);
+	}
+
+	/**
+	 * Save testing mode to the preferences.
+	 * 
+	 * @param mode
+	 *            mode to set.
+	 */
+	public void setMode(int mode) {
+		save(MODE, mode);
+	}
+
+	/**
+	 * Get testing mode from the preferences.
+	 * 
+	 * @return testing mode.
+	 */
+	public int getMode() {
+		return get(MODE, UNKNOWN_MODE);
+	}
+
+	/**
+	 * Save testing type to the preferences.
+	 * 
+	 * @param type
+	 *            type to set.
+	 */
+	public void setType(int type) {
+		save(TYPE, type);
+	}
+
+	/**
+	 * Get testing type from the preferences.
+	 * 
+	 * @return testing type.
+	 */
+	public int getType() {
+		return get(TYPE, UNKNOWN_TYPE);
+	}
+
+	/**
+	 * Save testing step to the preferences.
+	 * 
+	 * @param step
+	 *            step to set.
+	 */
+	public void setStep(int step) {
+		save(STEP, step);
+	}
+
+	/**
+	 * Get testing step from the preferences.
+	 * 
+	 * @return testing step.
+	 */
+	public int getStep() {
+		return get(STEP, PREPARE_STEP);
 	}
 }
