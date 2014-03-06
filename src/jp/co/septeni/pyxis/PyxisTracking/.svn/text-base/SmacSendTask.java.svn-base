@@ -1,0 +1,217 @@
+package jp.co.septeni.smac.SmacTracking;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import android.os.AsyncTask;
+import android.text.TextUtils;
+
+public class SmacSendTask extends AsyncTask<String, Void, String> {
+	private SmacUtils smacUtils = new SmacUtils();
+	private SmacConst smacConst = new SmacConst();
+	private String className = this.getClass().getSimpleName();
+
+	/** AES 暗号化キー
+	 *  TODO:SmacCpiTrackingにも同じ設定値あり
+	 *  ※ 外部からアクセス出来ない様にクラス毎にprivate変数としている
+	 * */
+	private String AES_KEY	 = "nH9Lvmxb4VstiGhr";
+
+	// バックグラウンド前処理
+	@Override
+	protected void onPreExecute(){
+	}
+
+	// バックグラウンド処理
+	@Override
+	protected String doInBackground(String... urls) {
+
+		SmacDBHelper dbHelper = new SmacDBHelper();
+		HashMap<String, Object> userMap = dbHelper.selUser();
+		HashMap<String, Object> installMap = dbHelper.selInstall();
+
+		Object uuidObj = userMap.get("UUID");
+
+		String uuid = null;
+		if(uuidObj != null) {
+			uuid = userMap.get("UUID").toString();
+		}
+
+		// CPI計測利用なしでUUIDが存在しない場合は取得する
+		if(!SmacTracking.isEnableCpi && TextUtils.isEmpty(uuid)){
+			if(smacUtils.getNetworkStatus()){
+				SmacUtils smacUtils = new SmacUtils();
+				uuid = smacUtils.getUUID();
+				// UUIDが取得できたら保存
+				if(!TextUtils.isEmpty(uuid)) {
+					dbHelper.updUser(null, null, uuid, null);
+				}
+			}
+		} else {
+
+			String cvMode = "0";
+			if(SmacTracking.actionPoint != null && !TextUtils.isEmpty(SmacTracking.actionPoint.get("cv_mode"))) {
+				cvMode = SmacTracking.actionPoint.get("cv_mode");
+			} else if(!TextUtils.isEmpty(SmacTracking.cvMode)){
+				cvMode = SmacTracking.cvMode;
+			}
+
+			if (cvMode.equals("0") && (Integer)installMap.get("START_FLAG") != 1){
+
+				String message = "アプリ内計測情報送信 [cv_mode = 0] : インストール未計測のためスキップ";
+				/** ################# tracelog チェック false ################# */
+				SmacUtils.recordLog(className
+												,(new Throwable()).getStackTrace()[0].getMethodName()
+												,(new Throwable()).getStackTrace()[0].getLineNumber() ,
+												message, 1,false);
+				return "";
+
+			} else if (cvMode.equals("1")
+					&& (Integer)installMap.get("FB_START_FLAG") != 1){
+
+				String message = "アプリ内計測情報送信 [cv_mode = 1] : インストール未計測のためスキップ";
+				/** ################# tracelog チェック false ################# */
+				SmacUtils.recordLog(className
+												,(new Throwable()).getStackTrace()[0].getMethodName()
+												,(new Throwable()).getStackTrace()[0].getLineNumber() ,
+												message, 1,false);
+				return "";
+
+			} else if (cvMode.equals("2")
+					&& (Integer)installMap.get("START_FLAG") != 1
+					 && (Integer)installMap.get("FB_START_FLAG") != 1){
+
+				String message = "アプリ内計測情報送信 [cv_mode = 2] : インストール未計測のためスキップ";
+				/** ################# tracelog チェック false ################# */
+				SmacUtils.recordLog(className
+												,(new Throwable()).getStackTrace()[0].getMethodName()
+												,(new Throwable()).getStackTrace()[0].getLineNumber() ,
+												message, 1,false);
+				return "";
+			}
+
+		}
+
+		// UUIDが送信出来る場合のみ処理をする
+		if(!TextUtils.isEmpty(uuid)) {
+
+			// 保存件数取得
+			int saveRow = dbHelper.selCntAction("WHERE ACT_SENDING <> 1");
+
+			if(saveRow > 0){
+
+				// 保存データー取得
+				List<HashMap<String, Object>> actionList = dbHelper.selAction();
+
+				// 回線状態取得
+				if(smacUtils.getNetworkStatus()){
+					// 端末ID(AES暗号＋base64)
+					 //String base64androidId = new String(smacUtils.base64Encode(smacUtils.encodeAES128(smacUtils.getAndroidId().getBytes(), AES_KEY.getBytes())));
+
+					List<String> actIdList = new ArrayList<String>();
+
+					// リクエストパラメータ生成
+
+					StringBuilder fs = new StringBuilder();
+
+					int cnt = 0;
+					for (HashMap<String, Object> hashMap : actionList) {
+
+						Integer actId = hashMap.get("ACT_ID") != null ? Integer.valueOf(hashMap.get("ACT_ID").toString()) : null;
+						String mv = hashMap.get("ACT_MV") != null ? hashMap.get("ACT_MV").toString() : "";
+						String verify = hashMap.get("ACT_VERIFY") != null ? hashMap.get("ACT_VERIFY").toString() : "";
+						String actDate = hashMap.get("ACT_DATE") != null ? hashMap.get("ACT_DATE").toString() : "";
+						String suid = hashMap.get("ACT_SUID") != null ? hashMap.get("ACT_SUID").toString() : "";
+						int fstFlg =  hashMap.get("ACT_FST_FLAG") != null ? Integer.valueOf(hashMap.get("ACT_FST_FLAG").toString()) : 0;
+						String sales = hashMap.get("ACT_SALES") != null ? hashMap.get("ACT_SALES").toString() : "";
+						String volume = hashMap.get("ACT_VOLUME") != null ? hashMap.get("ACT_VOLUME").toString() : "";
+						String value = hashMap.get("ACT_VALUE") != null ? hashMap.get("ACT_VALUE").toString() : "";
+
+						if(TextUtils.isEmpty(verify)){
+							verify = uuid;
+						}
+						fs.append(mv).append(smacConst.CODE_TAB);
+						fs.append(verify).append(smacConst.CODE_TAB);
+						// sesidはCPEで補完する
+						fs.append("").append(smacConst.CODE_TAB);
+						fs.append(suid).append(smacConst.CODE_TAB);
+						//fs.append(base64androidId).append(smacConst.CODE_TAB);
+						fs.append("").append(smacConst.CODE_TAB);
+						fs.append(smacUtils.getPhoneName()).append(smacConst.CODE_TAB);
+						fs.append(smacUtils.getOsVersion()).append(smacConst.CODE_TAB);
+						fs.append(actDate).append(smacConst.CODE_TAB);
+						fs.append(sales).append(smacConst.CODE_TAB);
+						fs.append(volume).append(smacConst.CODE_TAB);
+						fs.append(value).append(smacConst.CODE_LF);
+
+						// 処理対象のACT_IDを格納
+						actIdList.add(Integer.toString(actId));
+
+
+						String message = "アプリ内計測 ： 送信データ [" + cnt + "]"
+													+ " mv = " + mv + " \\t"
+													+ " verify = " + verify + " \\t"
+													+ " sesid = " + "" + " \\t"
+													+ " suid = " + suid + " \\t"
+													//+ " uid = " + base64androidId + " \\t"
+													+ " uid = " + "" + " \\t"
+													+ " dn = " + smacUtils.getPhoneName() + " \\t"
+													+ " os = " + smacUtils.getOsVersion() + " \\t"
+													+ " date = " + actDate  + " \\t"
+													+ " sales = " + sales  + " \\t"
+													+ " volume = " + volume  + " \\t"
+													+ " value = " + value;
+						cnt++;
+						/** ################# tracelog チェック false ################# */
+						SmacUtils.recordLog(className
+														,(new Throwable()).getStackTrace()[0].getMethodName()
+														,(new Throwable()).getStackTrace()[0].getLineNumber() ,
+														message, 0,false);
+
+					}
+
+					// データを送信する前に送信フラグをOnにする
+					dbHelper.updActionSending(actIdList, 1);
+
+					// データ圧縮
+					Map<String,String> param = new HashMap<String, String>();
+					param.put("fs", smacUtils.base64Encode(smacUtils.compressLzw(fs.toString())));
+
+					fs.delete(0, fs.length());
+
+					// 送信完了の場合DBのデーター削除
+					if(smacUtils.sendAppBySocket(smacConst.HTTP_PATH_APP_TRACKING, param)){
+						/** ################# tracelog チェック false ################# */
+						SmacUtils.recordLog(className
+														,(new Throwable()).getStackTrace()[0].getMethodName()
+														,(new Throwable()).getStackTrace()[0].getLineNumber() ,
+														"アプリ内計測情報送信成功", 0,false);
+						dbHelper.delAction(actIdList);
+					}else{
+						/** ################# errorlog ################# */
+						SmacUtils.recordLog(className,(new Throwable()).getStackTrace()[0].getMethodName(),(new Throwable()).getStackTrace()[0].getLineNumber() ,
+								"アプリ内計測情報送信失敗:理由[ソケット通信失敗]", 2,false);
+						dbHelper.updActionSending(actIdList, 0);
+					}
+				}
+			} else {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,(new Throwable()).getStackTrace()[0].getMethodName(),(new Throwable()).getStackTrace()[0].getLineNumber() ,
+						"アプリ内計測情報送信[アプリ内計測情報なし]", 1,false);
+			}
+		} else {
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,(new Throwable()).getStackTrace()[0].getMethodName(),(new Throwable()).getStackTrace()[0].getLineNumber() ,
+					"アプリ内計測情報送信[UUIDなし]", 1,false);
+		}
+		dbHelper.close();
+		return "";
+	}
+
+	// バックグランド終了後処理
+	@Override
+	protected void onPostExecute(String result) {
+	}
+}

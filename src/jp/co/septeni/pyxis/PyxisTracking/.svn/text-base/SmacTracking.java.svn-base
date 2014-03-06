@@ -1,0 +1,815 @@
+package jp.co.septeni.smac.SmacTracking;
+
+import java.util.HashMap;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.content.pm.ApplicationInfo;
+import android.content.pm.PackageManager;
+import android.content.pm.PackageManager.NameNotFoundException;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Build.VERSION;
+import android.text.TextUtils;
+import android.text.method.DateTimeKeyListener;
+
+/**
+ * Smac-SDK for Android.
+ *
+ * @author (C)SEPTENI CO.,LTD.
+ * @version 1.0.0, 11 Jul 2011
+ */
+public class SmacTracking {
+
+	protected static Context context;
+	protected static Intent intent;
+	protected static String siteId;
+	protected static Integer saveMax;
+	protected static Integer saveMode;
+	protected static Boolean logMode;
+	protected static String scheme;
+	protected static String appHost;
+	protected static boolean initExeced = false;
+	protected static String sesid;
+	protected static boolean isFirst;
+	protected static boolean isEnableCpi;
+	protected static Boolean enableSDCard;
+	protected static String smacHost;
+	protected static String smacAppScheme = null;
+	protected static String smacAppHost = null;
+	protected static String smacMv;
+	protected static String smacVerify;
+	protected static String smacSuid;
+	protected static Integer smacSales;
+	protected static Integer smacVolume;
+	protected static Integer smacValue;
+	protected static Boolean isReceive;
+	protected static HashMap<String, String> actionPoint;
+	protected static int sendInstallMode;
+	protected static String cvMode;
+
+	private final static String XML_PARAM_NAME_SMAC_HOST = "SMAC_HOST";
+	private final static String XML_PARAM_NAME_SMAC_SCHEME = "SMAC_SCHEME";
+	private static String className = new SmacTracking().getClass()
+			.getSimpleName();
+
+	/**
+	 * 初期化処理（必須） クラス変数のセット、DBのアップデート等初期処理を行う
+	 *
+	 * @param fromContext
+	 * @param fromIntent
+	 * @param smacAppScheme
+	 * @param smacAppHost
+	 */
+	public static void init(Context fromContext, Intent fromIntent,
+			String appScheme, String host) {
+
+		try {
+			// 渡されたContext、Intentをクラス変数にセット(必ず初期化する)
+			context = fromContext;
+			intent = fromIntent;
+			smacAppScheme = appScheme;
+			smacAppHost = host;
+
+			if(appScheme != null){
+				smacAppScheme = appScheme;
+			}
+			if(host != null){
+				smacAppHost = host;
+			}
+
+			if (smacHost == null) {
+				smacHost = getManifestValueString(XML_PARAM_NAME_SMAC_HOST, false);
+			}
+
+			if (smacAppScheme == null) {
+				smacAppScheme = getManifestValueString(XML_PARAM_NAME_SMAC_SCHEME, false);
+			}
+
+			SmacConst smacConst = new SmacConst();
+
+			// Manifest.xmlの定義をクラス変数にセット
+			if (TextUtils.isEmpty(siteId)) {
+				siteId = getManifestValueInteger(
+						smacConst.XML_PARAM_NAME_SMAC_SITE_ID).toString();
+			}
+			if (logMode == null) {
+				logMode = getManifestValueBool(smacConst.XML_PARAM_NAME_SMAC_LOG_MODE);
+			}
+
+			if (saveMax == null) {
+				saveMax = getManifestValueInteger(smacConst.XML_PARAM_NAME_SMAC_APP_SAVE_MAX);
+			}
+
+			if (saveMode == null) {
+				saveMode = getManifestValueInteger(smacConst.XML_PARAM_NAME_SMAC_APP_SAVE_MODE);
+			}
+
+			if (enableSDCard == null) {
+				enableSDCard = false;
+				int SdPermit = context.checkCallingOrSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE);
+
+				if(SdPermit == PackageManager.PERMISSION_GRANTED){
+					enableSDCard = true;
+				}
+			}
+
+			if (cvMode == null) {
+				cvMode = getManifestValueInteger(smacConst.XML_PARAM_NAME_SMAC_CV_MODE).toString();
+			}
+
+			if (TextUtils.isEmpty(scheme)) {
+				scheme = smacAppScheme;
+			}
+
+			if (TextUtils.isEmpty(appHost)) {
+				appHost = smacAppHost;
+			}
+
+			isReceive = false;
+
+			if(initExeced){
+				return;
+			}
+
+			initExeced = true;
+
+
+			// ログの初期化有無
+			SmacUtils smacUtils = new SmacUtils();
+
+			// ブラウザから起動された場合は初期化しない
+			/** ################# tracelog 処理開始 ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"初期化処理開始", 1, !smacUtils.isStartupFromBrowser());
+
+			/** ################# tracelog パラメータ ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"初期化時パラメータ情報 [siteId = " + siteId + " / logMode = "
+							+ logMode + " / saveMax = " + saveMax
+							+ " / saveMode = " + saveMode
+							+ " / enableSDCard = " + enableSDCard
+							+ " / scheme = " + scheme + " / appHost = "
+							+ appHost + " ]", 1, false);
+
+			if (logMode) {
+				/** ################# SDカードチェック ################# */
+				if (!SmacTracking.enableSDCard) {
+					SmacUtils
+							.recordLog(
+									className,
+									(new Throwable()).getStackTrace()[0]
+											.getMethodName(),
+									(new Throwable()).getStackTrace()[0]
+											.getLineNumber(),
+									"AndroidManifest.xml に WRITE_EXTERNAL_STORAGE のパーミッションが設定されていません。",
+									1, false);
+				} else if (!Environment.MEDIA_MOUNTED.equals(Environment
+						.getExternalStorageState())) {
+					enableSDCard = false;
+					SmacUtils
+							.recordLog(
+									className,
+									(new Throwable()).getStackTrace()[0]
+											.getMethodName(),
+									(new Throwable()).getStackTrace()[0]
+											.getLineNumber(),
+									"SDカードへの出力が出来ません。理由：SDカードが存在しない。又はSDカードがPCにマウントされている等。",
+									1, false);
+				}
+			}
+
+			// インストール情報取得
+			SmacDBHelper dbHelper = new SmacDBHelper();
+			HashMap<String, Object> installMap = dbHelper.selInstall();
+
+			isEnableCpi = false;
+
+			// 初回起動かチェック
+			if (installMap.get("START_DATE") != null) {
+
+				SharedPreferences pref = fromContext.getSharedPreferences(
+						smacConst.PREF_SMAC, Context.MODE_PRIVATE);
+				int aliveFlg = pref.getInt(
+						smacConst.PREF_SMAC_SESSION_ALIVE_FLG, 2);
+
+				/** ################# tracelog セッション状態 ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"セッション : " + (aliveFlg == 1 ? "有効" : "無効"), 1, false);
+
+				if (aliveFlg == 1) {
+					isFirst = true;
+
+					/** ################# tracelog 初回起動チェック ################# */
+					SmacUtils.recordLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "アプリ初回起動", 1, false);
+				} else {
+					isFirst = false;
+
+					/** ################# tracelog 初回起動チェック ################# */
+					SmacUtils.recordLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "アプリ初回起動以外", 1, false);
+				}
+
+				if (aliveFlg != 0) {
+					// フラグを戻す(0はセッション生存無効)
+					Editor e = pref.edit();
+					e.putInt(smacConst.PREF_SMAC_SESSION_ALIVE_FLG, 0);
+					e.commit();
+
+					// 書けるまで待つ
+					// 念のため、別個にインスタンス生成
+					SharedPreferences refpref = fromContext
+							.getSharedPreferences(smacConst.PREF_SMAC,
+									Context.MODE_PRIVATE);
+
+					boolean isRead = false;
+					int count = 0;
+					while (!isRead) {
+
+						// 2はunknown
+						if (refpref.getInt(
+								smacConst.PREF_SMAC_SESSION_ALIVE_FLG, 2) == 0) {
+							// あんまり意味ないけど一応
+							isRead = true;
+							break;
+						} else {
+							count++;
+							// 0.5秒ウェイト
+							Thread.sleep(500);
+						}
+
+						// カウンタを超えたら諦める
+						if (count > 3) {
+							/**
+							 * ################# errorlog Shared Preference
+							 * 書き込み失敗 #################
+							 */
+							SmacUtils
+									.recordLog(
+											className,
+											(new Throwable()).getStackTrace()[0]
+													.getMethodName(),
+											(new Throwable()).getStackTrace()[0]
+													.getLineNumber(),
+											"Shared Preferenceへの書き込み失敗の可能性 : param ["
+													+ smacConst.PREF_SMAC_SESSION_ALIVE_FLG
+													+ "]", 2, false);
+							break;
+						}
+					}
+				}
+
+			} else {
+
+				isFirst = true;
+
+				/** ################# tracelog 初回起動チェック ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"アプリ初回起動", 1, false);
+
+				// INSTALLテーブルに起動日時を登録
+				Double dateTimeLong = (double) (System.currentTimeMillis() / 1000);
+				dbHelper.insInstall(null, null, dateTimeLong, null);
+			}
+
+			dbHelper.close();
+
+			// DBのアップデート
+			SmacUpdate smacUpdate = new SmacUpdate();
+			smacUpdate.updateDB();
+
+			// アプリ内計測の送信中フラグを初期化
+			smacUpdate.initAppSending();
+
+		} catch (Exception e) {
+			/** ################# errorlog ################# */
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"初期化処理に失敗", 2, false, e);
+
+			// 原因追求のため可能な場合はsqliteファイルをSDカードにコピー
+			copyDBtoExternalStorage();
+		}
+
+		/** ################# tracelog 処理終了 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"初期化処理終了", 1, false);
+	}
+
+	/**
+	 * CPI計測処理
+	 *
+	 * @param smacMv
+	 * @param smacVerify
+	 * @param suid
+	 */
+	public static void trackInstall(String mv, String verify,	String suid) {
+		trackInstall(mv, verify, suid, "", "", "");
+	}
+
+	/**
+	 * CPI計測処理
+	 *
+	 * @param smacMv
+	 * @param smacVerify
+	 * @param suid
+	 * @param sales
+	 * @param volume
+	 * @param value
+	 */
+	public static void trackInstall(String mv
+												, String verify
+												, String suid
+												, String sales
+												, String volume
+												, String value) {
+
+		Integer iSales = null;
+		if(!TextUtils.isEmpty(sales)){
+			iSales = Integer.valueOf(sales);
+		}
+
+		Integer iVolume = null;
+		if(!TextUtils.isEmpty(volume)){
+			iVolume = Integer.valueOf(volume);
+		}
+
+		Integer iValue = null;
+		if(!TextUtils.isEmpty(value)){
+			iValue = Integer.valueOf(value);
+		}
+		trackInstall(mv, verify, suid, iSales, iVolume, iValue);
+	}
+
+	/**
+	 * CPI計測処理
+	 *
+	 * @param smacMv
+	 * @param smacVerify
+	 * @param suid
+	 * @param sales
+	 * @param volume
+	 * @param value
+	 */
+	@SuppressWarnings("deprecation")
+	public static void trackInstall(String mv
+												, String verify
+												, String suid
+												, Integer sales
+												, Integer volume
+												, Integer value) {
+
+		/** ################# tracelog 処理開始 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"CPI計測開始", 1, false);
+
+		// INSTALL_REFERRERのonReceiveから起動されかつ3.1未満の場合
+		if (SmacTracking.isReceive == true && Integer.parseInt(VERSION.SDK) < 12) {
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"INSTALL_REFERRER経由", 1, false);
+
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"3.1未満", 1, false);
+			return;
+		}
+		if (!initExeced) {
+			// errorlog
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"初期化メソッド：SmacTracking.initが呼ばれていません。", 2, false);
+			SmacUtils.processKiller();
+		}
+
+		String salesStr = null;
+		if(sales != null){
+			salesStr = sales.toString();
+		}
+
+		String volumeStr = null;
+		if(volume != null){
+			volumeStr = volume.toString();
+		}
+
+		String valueStr = null;
+		if(value != null){
+			valueStr = value.toString();
+		}
+
+		/** ################# tracelog パラメータ ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"CPI計測時の引数 [mv = " + mv + " / verify = " + verify
+						+ " / suid = " + suid
+						+ " / sales = " + salesStr
+						+ " / volume = " + volumeStr
+						+ " / value = " + valueStr
+						+ " ]", 1, false);
+
+		try {
+			smacMv = mv;
+			smacVerify = "";
+
+			if(!TextUtils.isEmpty(verify)){
+				smacVerify = verify;
+			}
+
+			smacSuid = "";
+			if(!TextUtils.isEmpty(suid)){
+				smacSuid = suid;
+			}
+
+			smacSales = sales;
+			smacVolume = volume;
+			smacValue = value;
+
+			SmacCpiTracking smacCpiTracking = new SmacCpiTracking();
+			smacCpiTracking.trackInstallAlias();
+
+		} catch (Exception e) {
+			/** ################# errorlog ################# */
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"CPI計測処理に失敗", 2, false, e);
+
+			// 原因追求のため可能な場合はsqliteファイルをSDカードにコピー
+			copyDBtoExternalStorage();
+		}
+
+		/** ################# tracelog 処理終了 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"CPI計測終了", 1, false);
+	}
+
+	/**
+	 * アプリ内計測保存処理
+	 *
+	 * @param smacMv
+	 * @param smacVerify
+	 * @param suid
+	 */
+	public static void saveTrackApp(String smacMv, String smacVerify,
+			String suid) {
+		saveTrackApp(smacMv, smacVerify, suid, null, null, null);
+	}
+
+	/**
+	 * アプリ内計測保存処理
+	 *
+	 * @param smacMv
+	 * @param smacVerify
+	 * @param suid
+	 * @param sales
+	 * @param volume
+	 * @param value
+	 */
+	public static void saveTrackApp(String smacMv, String smacVerify,
+			String suid, Integer sales, Integer volume, Integer value) {
+
+		/** ################# tracelog 処理開始 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"アプリ内計測保存処理開始", 1, false);
+
+		try {
+			/** ################# tracelog パラメータ ################# */
+			SmacUtils.recordLog(
+					className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"アプリ内計測保存処理パラメータ情報 [mv = " + smacMv + " / verify = "
+							+ smacVerify + " / suid = " + suid + " / sales = "
+							+ (sales == null ? "" : Integer.toString(sales))
+							+ " / volume = "
+							+ (volume == null ? "" : Integer.toString(volume))
+							+ " / value = "
+							+ (value == null ? "" : Integer.toString(value))
+							+ " ]", 1, false);
+
+			if (!initExeced) {
+				// errorlog
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"初期化メソッド：SmacTracking.initが呼ばれていません。", 2, false);
+				SmacUtils.processKiller();
+			}
+
+			SmacAppTracking smacAppTracking = new SmacAppTracking();
+			smacAppTracking.save(smacMv, smacVerify, suid, siteId, sales,
+					volume, value, saveMax, saveMode);
+
+			/** ################# errorlog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"アプリ内計測保存処理成功", 0, false);
+		} catch (Exception e) {
+			/** ################# errorlog ################# */
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"アプリ内計測保存処理失敗", 2, false, e);
+		}
+
+		/** ################# tracelog 処理終了 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"アプリ内計測保存処理終了", 1, false);
+
+	}
+
+	/**
+	 * アプリ内計測送信処理
+	 */
+	public static void sendTrackApp() {
+
+		/** ################# tracelog 処理開始 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"アプリ内計測送信処理開始", 1, false);
+
+		try {
+
+			if (!initExeced) {
+				// errorlog
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"初期化メソッド：SmacTracking.initが呼ばれていません。", 2, false);
+				SmacUtils.processKiller();
+			}
+
+			SmacAppTracking smacAppTracking = new SmacAppTracking();
+			smacAppTracking.send();
+
+		} catch (Exception e) {
+			/** ################# errorlog ################# */
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"アプリ内計測送信処理失敗", 2, false, e);
+		}
+
+		/** ################# tracelog 処理開始 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"アプリ内計測送信処理終了", 1, false);
+
+	}
+
+	/**
+	 * sqliteファイルのコピー (手動)
+	 */
+	public static void copyDBtoExternalStorage() {
+
+		/** ################# tracelog 処理開始 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"sqliteファイルのコピー (手動)開始", 1, false);
+
+		if (!initExeced) {
+			// errorlog
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"初期化メソッド：SmacTracking.initが呼ばれていません。", 2, false);
+			SmacUtils.processKiller();
+		}
+
+		SmacUtils smacUtils = new SmacUtils();
+		if (!smacUtils.copyDBtoExternalStorage()) {
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"sqliteファイルのSDカードへのコピーに失敗", 2, false);
+		}
+
+		/** ################# tracelog 処理終了 ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"sqliteファイルのコピー (手動)終了", 1, false);
+
+	}
+
+	/**
+	 * @Deprecated AndroidManifest.xmlから値を取得(文字列)
+	 *
+	 * @param name
+	 * @return String
+	 */
+	protected static String getManifestValueString(String name) {
+		return getManifestValueString(name, true);
+	}
+
+	protected static String getManifestValueString(String name, Boolean flg) {
+
+		SmacConst smacConst = new SmacConst();
+		String returnStr = null;
+		try {
+			Object manifestValue = getManifestValue(name, smacConst.XML_VALUE_TYPE_STRING);
+			if(manifestValue != null){
+				returnStr = manifestValue.toString();
+			}
+		} catch (Exception e) {
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"AndroidManifest.xml から" + name + "の値の取得に失敗しました。", 2,
+					false, e);
+		}
+
+		if (returnStr == null && flg == true) {
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"AndroidManifest.xml から" + name + "の値が取得出来ません。", 2, false);
+		}
+
+		return returnStr;
+
+	}
+
+	/**
+	 * AndroidManifest.xmlから値を取得(数値)
+	 *
+	 * @param name
+	 * @return Integer
+	 */
+	private static Integer getManifestValueInteger(String name) {
+
+		SmacConst smacConst = new SmacConst();
+
+		Integer returnInt = null;
+		try {
+			Object manifestValue = getManifestValue(name, smacConst.XML_VALUE_TYPE_INT);
+			if(manifestValue != null){
+				returnInt = (Integer) manifestValue;
+			}
+		} catch (Exception e) {
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"AndroidManifest.xml から" + name + "の値の取得に失敗しました。", 2,
+					false, e);
+		}
+
+		if (returnInt == null) {
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"AndroidManifest.xml から" + name + "の値が取得出来ません。", 2, false);
+		}
+
+		return returnInt;
+	}
+
+	/**
+	 * AndroidManifest.xmlから値を取得(Boolean)
+	 *
+	 * @param name
+	 * @return
+	 */
+	private static Boolean getManifestValueBool(String name) {
+
+		SmacConst smacConst = new SmacConst();
+
+		Boolean returnBool = null;
+
+		try {
+			Object manifestValue = getManifestValue(name, smacConst.XML_VALUE_TYPE_BOOL);
+			if(manifestValue != null){
+				returnBool = (Boolean) manifestValue;
+			}
+		} catch (Exception e) {
+			SmacUtils.recordErrorLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"AndroidManifest.xml から" + name + "の値の取得に失敗しました。", 2,
+					false, e);
+		}
+
+		if (returnBool == null) {
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"AndroidManifest.xml から" + name + "の値が取得出来ません。", 2, false);
+		}
+
+		return returnBool;
+
+	}
+
+	// 未使用 --------------------------------------------------
+	// /** @Deprecated
+	// * AndroidManifest.xmlから値を取得(浮動小数点)
+	// *
+	// * @param name
+	// * @return
+	// */
+	// private static Float getManifestValueFloat(String name) {
+	//
+	// Float returnFloat = null;
+	//
+	// try {
+	// returnFloat = (Float) getManifestValue(name,
+	// smacConst.XML_VALUE_TYPE_FLOAT);
+	// } catch (Exception e) {
+	// SmacUtils.recordLog(className,(new
+	// Throwable()).getStackTrace()[0].getMethodName(),(new
+	// Throwable()).getStackTrace()[0].getLineNumber() ,
+	// "AndroidManifest.xml から" + name + "の値の取得に失敗しました。" + e, 2,false);
+	// }
+	//
+	// if(returnFloat == null) {
+	// SmacUtils.recordLog(className,(new
+	// Throwable()).getStackTrace()[0].getMethodName(),(new
+	// Throwable()).getStackTrace()[0].getLineNumber() ,
+	// "AndroidManifest.xml から" + name + "の値が取得出来ません。", 2,false);
+	// }
+	//
+	// return returnFloat;
+	// }
+	// 未使用 --------------------------------------------------
+
+	/**
+	 * AndroidManifest.xmlから値を取得
+	 *
+	 * @param context
+	 * @param name
+	 *            項目名
+	 * @param type
+	 *            型
+	 * @return Object
+	 */
+	private static Object getManifestValue(String name, String type) {
+
+		Object returnValue = null;
+
+		try {
+			ApplicationInfo info = context.getPackageManager()
+					.getApplicationInfo(context.getPackageName(),
+							PackageManager.GET_META_DATA);
+
+			Bundle metaData = info.metaData;
+
+			if ("String".equals(type)) {
+				returnValue = metaData.getString(name);
+			} else if ("int".equals(type)) {
+				returnValue = metaData.getInt(name);
+			} else if ("boolean".equals(type)) {
+				returnValue = metaData.getBoolean(name);
+			} else if ("float".equals(type)) {
+				returnValue = metaData.getFloat(name);
+			}
+
+		} catch (NameNotFoundException e) {
+			SmacUtils
+					.recordErrorLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "AndroidManifest.xml に"
+									+ name + "の項目が存在しません。", 2, false, e);
+		}
+
+		return returnValue;
+
+	}
+
+}

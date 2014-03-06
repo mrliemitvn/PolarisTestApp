@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Pyxis Dev -->
+    <string name="dev_pyxis_mv_install_tracking">2590cae7240a04703fffe61670e119cb</string>
+    <!-- Pyxis Staging -->
+    <string name="staging_pyxis_mv_install_tracking">a44da247c848d6ae3873a41db5ff0f56</string>
+
+    <!-- App -->
+    <string name="app_name">Staging_174_0304</string>
+    <string name="action_settings">Settings</string>
+    <string name="hello_world">Test Polaris!</string>
+    <string name="facebook_app_id">654528807921233</string>
+    <string name="send">Send</string>
+    <string name="description_others_test">Tracking others:</string>
+    <string name="description_notification_test">Custom Audience testing:</string>
+    <string name="description_purchase_test">Purchase in app testing:</string>
+    <string name="description_in_app_event_test">In app event testing:</string>
+    <string name="msg_info_some_fields_empty">Some fields is empty</string>
+    <string name="msg_info_delete_database">Delete sqlite database</string>
+    <string name="delete_database">Delete app database</string>
+    <string name="exit">Exit</string>
+
+    <!-- Custom audience -->
+    <string name="email_title">Email</string>
+    <string name="phone_number_title">Phone number</string>
+    <string name="facebook_user_id_title">FB user id</string>
+    <string name="app_user_id_title">App user id</string>
+    <string name="send_custom_audien">Send Custom Audience</string>
+
+    <!-- Active -->
+    <string name="suid_title">suid:</string>
+    <string name="sales_title">sales:</string>
+    <string name="volume_title">volume:</string>
+    <string name="profit_title">profit:</string>
+    <string name="others_title">others:</string>
+    <string name="limit_mode_title">Limit mode:</string>
+
+</resources>

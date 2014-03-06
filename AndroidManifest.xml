@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.septeni.polaris"
+    android:versionCode="1"
+    android:versionName="1.0" >
+
+    <uses-sdk
+        android:minSdkVersion="9"
+        android:targetSdkVersion="18" />
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+
+    <application
+        android:name="com.septeni.polaris.PolarisApplication"
+        android:allowBackup="true"
+        android:icon="@drawable/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/AppTheme" >
+        <activity
+            android:name="com.septeni.polaris.activity.TestSDKActivity"
+            android:label="@string/app_name" >
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:host="com.septeni.polaris"
+                    android:scheme="schemea" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.septeni.pyxis.sdk.activity.WebViewActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name="com.septeni.pyxis.sdk.activity.ThreadActivity"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name="com.septeni.pyxis.sdk.activity.DatabaseActionActivity"
+            android:screenOrientation="portrait" />
+        <activity android:name="com.facebook.LoginActivity" />
+
+        <meta-data
+            android:name="com.facebook.sdk.ApplicationId"
+            android:value="@string/facebook_app_id" />
+
+        <receiver
+            android:name="jp.co.septeni.pyxis.PyxisTracking.PyxisReceiver"
+            android:exported="true" >
+            <intent-filter>
+                <action android:name="com.android.vending.INSTALL_REFERRER" >
+                </action>
+            </intent-filter>
+        </receiver>
+
+        <!-- Test -->
+        <meta-data
+            android:name="PYXIS_APP_SAVE_MAX"
+            android:value="100" />
+        <!-- 最大保存件数超過時の動作 [半角数字のみ] 0:追加なし / 1:古いデータを上書き -->
+        <meta-data
+            android:name="PYXIS_APP_SAVE_MODE"
+            android:value="1" />
+        <!-- ログモード [true/falseのみ] true:ログ出力ON / false:ログ出力OFF -->
+        <meta-data
+            android:name="PYXIS_LOG_MODE"
+            android:value="true" />
+
+        <!-- プロモーションID -->
+        <meta-data
+            android:name="PYXIS_PID"
+            android:value="174" />
+        <!-- Dev: 60226 -->
+        <!-- Stage: 60116 -->
+        <!-- Liem test staging: 201 -->
+        <!-- Yen test production: 120 -->
+        <!-- Yen test staging: 60560, 62294, 151, 174, 61 -->
+        <!-- Hai Anh test staging: 60116, 62304, 171 -->
+        <!-- Cao Hang test staging: 175, 177, 173 -->
+    </application>
+
+</manifest>

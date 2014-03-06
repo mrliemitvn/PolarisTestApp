@@ -1,0 +1,812 @@
+package jp.co.septeni.smac.SmacTracking;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+
+import jp.co.septeni.smac.SmacTracking.SmacDBHelper;
+
+import org.apache.http.NameValuePair;
+import org.apache.http.message.BasicNameValuePair;
+
+import android.content.Context;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.SharedPreferences.Editor;
+import android.net.Uri;
+import android.os.Build;
+import android.os.StrictMode;
+import android.text.TextUtils;
+
+public class SmacCpiTracking {
+
+	private SmacUtils smacUtils = new SmacUtils();
+	private String className = this.getClass().getSimpleName();
+
+	/**
+	 * AES 暗号化キー TODO:SmacCpiTrackingにも同じ設定値あり ※
+	 * 外部からアクセス出来ない様にクラス毎にprivate変数としている
+	 * */
+	private String AES_KEY = "nH9Lvmxb4VstiGhr";
+
+	/**
+	 * CPI計測
+	 *
+	 * @since 1.0.0
+	 * @param Context
+	 *            fromContext アプリケーションコンテキスト
+	 * @param Intent
+	 *            fromIntent アプリケーションインテント
+	 * @param String
+	 *            smacAppScheme AndroidManifest.xmlで定義したSmac用のschme
+	 * @param String
+	 *            smacAppHost AndroidManifest.xmlで定義したSmac用のhost
+	 * @param boolean smacInstallFlg true 固定
+	 * @param String
+	 *            smacMv Smacで発行されたmv
+	 * @param String
+	 *            smacVerify 任意のVerify値(NULL許可)
+	 * @param String
+	 *            suid 任意のユーザ識別子(NULL許可)
+	 * @param String
+	 *            smacSiteId Smacで発行されたサイトID
+	 * @param Integer sales 金額
+	 * @param Integer volume 数量
+	 * @param Integer value 単価
+	 */
+	protected void trackInstallAlias() {
+
+		//Change mode to allow network thread runing in Gui thread
+		if (android.os.Build.VERSION.SDK_INT > 9) {
+			StrictMode.ThreadPolicy policy =
+			        new StrictMode.ThreadPolicy.Builder().permitAll().build();
+			StrictMode.setThreadPolicy(policy);
+		}
+
+		Context fromContext = SmacTracking.context;
+		Intent fromIntent = SmacTracking.intent;
+
+		SmacConst smacConst = new SmacConst();
+
+		String action = fromIntent.getAction();
+
+		SmacTracking.isEnableCpi = true;
+
+		// 通信不可時はスキップ
+		if (!smacUtils.getNetworkStatus() || !smacUtils.checkNetworkStatus()) {
+			return;
+		}
+
+		// Intstall情報取得
+		SmacDBHelper dbHelper = new SmacDBHelper();
+		HashMap<String, Object> installMap = dbHelper.selInstall();
+		dbHelper.close();
+
+		int isBrowserUped = 0;
+		if (installMap.get("IS_BROWSER_UPED") != null) {
+			isBrowserUped = (Integer)installMap.get("IS_BROWSER_UPED");
+		}
+
+		// ブラウザから起動した場合はSharedPreferenceから成果点情報を取得
+		if (isBrowserUped == 1) {
+			SharedPreferences brefpref = fromContext.getSharedPreferences(
+															smacConst.PREF_SMAC,
+															Context.MODE_PRIVATE);
+
+			SmacTracking.actionPoint = new HashMap<String, String>();
+
+			if(!brefpref.getString("referrer_flg", "").equals("")){
+				SmacTracking.actionPoint.put("referrer_flg", brefpref.getString("referrer_flg", ""));
+			}
+
+			if(!brefpref.getString("browser_up_flg", "").equals("")){
+				SmacTracking.actionPoint.put("browser_up_flg", brefpref.getString("browser_up_flg", ""));
+			}
+
+			if(!brefpref.getString("welcome_type", "").equals("")){
+				SmacTracking.actionPoint.put("welcome_type", brefpref.getString("welcome_type", "0"));
+			}
+
+			if(!brefpref.getString("welcome_url", "").equals("")){
+				SmacTracking.actionPoint.put("welcome_url", brefpref.getString("welcome_url", ""));
+			}
+
+			if(!brefpref.getString("cv_mode", "").equals("")){
+				SmacTracking.actionPoint.put("cv_mode", brefpref.getString("cv_mode", ""));
+			}
+		}
+
+		if (SmacTracking.actionPoint == null || SmacTracking.actionPoint.isEmpty()) {
+			// 成果点情報取得
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"CPI計測処理 : 成果点情報取得", 1, false);
+
+			System.gc();
+
+			SmacTracking.actionPoint = smacUtils.getActionPoint(SmacTracking.smacMv);
+
+			if (SmacTracking.actionPoint == null || SmacTracking.actionPoint.isEmpty()){
+				// 成果点情報が取得できなければ終了
+				/** ################# errorlog ################# */
+				SmacUtils.recordLog(new SmacUtils().getClass().getSimpleName(),
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"CPI計測処理 : 成果点情報取得エラーによりプロセス終了 ", 2, false);
+				return;
+			}
+
+			String message = "referrer_flg = " + SmacTracking.actionPoint.get("referrer_flg")
+										+ " ,browser_up_flg = " + SmacTracking.actionPoint.get("browser_up_flg")
+										+ " ,welcome_type = " + SmacTracking.actionPoint.get("welcome_type")
+										+ " ,welcome_url = " + SmacTracking.actionPoint.get("welcome_url")
+										+ " ,cv_mode = " + SmacTracking.actionPoint.get("cv_mode");
+
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className
+											, (new Throwable()).getStackTrace()[0].getMethodName()
+											, (new Throwable()).getStackTrace()[0].getLineNumber()
+											, message
+											, 1
+											, false);
+
+		}
+
+		String referrerFlg = SmacTracking.actionPoint.get("referrer_flg");
+		String cvMode = SmacTracking.actionPoint.get("cv_mode");
+
+		if(TextUtils.isEmpty(cvMode)){
+			cvMode = SmacTracking.cvMode;
+			SmacTracking.actionPoint.put("cv_mode", cvMode);
+		}
+
+		// 引数&パラメータチェック
+		if (!smacUtils.checkParamsForCpi()) {
+			return ;
+		}
+
+		// User情報取得
+		dbHelper = new SmacDBHelper();
+		HashMap<String, Object> userMap = dbHelper.selUser();
+		dbHelper.close();
+
+		if (!TextUtils.isEmpty(SmacTracking.smacVerify)) {
+			// verifyが指定されている場合
+
+			// UUIDが取得できたら保存
+			dbHelper = new SmacDBHelper();
+			dbHelper.updUser(null, null, SmacTracking.smacVerify, null);
+			dbHelper.close();
+
+		} else {
+			// verifyが指定されていない場合
+
+			if (!TextUtils.isEmpty((String) userMap.get("UUID"))) {
+				// UUIDが保存されている場合はセット
+				SmacTracking.smacVerify = (String) userMap.get("UUID");
+			} else {
+				// UUIDが保存されていない場合は、SmacからUUIDを取得
+				String uuid = smacUtils.getUUID();
+				if (TextUtils.isEmpty(uuid)) {
+
+					String message = "CPI計測処理 [cv_mode = ] : "
+												+ cvMode
+												+ " : verifyの指定なし、且つUUIDの取得に失敗したため終了";
+
+					/** ################# errorlog ################# */
+					SmacUtils.recordLog(className
+							, (new Throwable()).getStackTrace()[0].getMethodName()
+							, (new Throwable()).getStackTrace()[0].getLineNumber()
+							, message
+							, 2
+							, false);
+					return;
+				}
+
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className, (new Throwable()).getStackTrace()[0].getMethodName()
+						, (new Throwable()).getStackTrace()[0].getLineNumber()
+						, "CPI計測処理 : UUIDを保存 [uuid =" + uuid + "]"
+						, 1
+						, false);
+
+				// UUIDが取得できたら保存
+				dbHelper = new SmacDBHelper();
+				dbHelper.updUser(null, null, uuid, null);
+				dbHelper.close();
+
+				SmacTracking.smacVerify = uuid;
+			}
+		}
+
+		Integer installFlg = 0;
+		if (installMap.get("START_FLAG") != null) {
+			installFlg = (Integer) installMap.get("START_FLAG");
+		}
+
+		Integer fbInstallFlg = 0;
+		if (installMap.get("FB_START_FLAG") != null) {
+			fbInstallFlg = (Integer) installMap.get("FB_START_FLAG");
+		}
+
+		// 通常計測のみの場合で計測済みの場合はスキップ
+		if(cvMode.equals("0") && installFlg == 1){
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"CPI計測[通知済み]", 1, false);
+				return;
+		}
+
+		// FB計測（Mobile App INstall）のみの場合で計測済みの場合はスキップ
+		if(cvMode.equals("1") && fbInstallFlg == 1){
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"FB (Mobile App Install Ad) CPI計測[通知済み]", 1, false);
+			return;
+		}
+
+		// 通常計測 & FB計測（Mobile App INstall）の場合で計測済みの場合はスキップ
+		if(cvMode.equals("2") && installFlg == 1 && fbInstallFlg == 1){
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"通常CPI計測 & FB (Mobile App Install Ad) CPI計測[通知済み]", 1, false);
+			return;
+		}
+
+		// FB計測（Mobile App Install）が有効の場合は通知
+		if (!cvMode.equals("0") && fbInstallFlg != 1) {
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className
+					, (new Throwable()).getStackTrace()[0].getMethodName()
+					, (new Throwable()).getStackTrace()[0]	.getLineNumber()
+					, "FB計測（FB Mobile App Install Ad）有効"
+					, 1
+					, false);
+
+			String attributionId = "";
+
+			try {
+				attributionId = FbUtils.getAttributionId(SmacTracking.context.getContentResolver());
+			} catch (Exception e){
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"FB計測（FB Mobile App Install Ad）: attribution_id 取得失敗" + e.getStackTrace().toString() , 1, false);
+			}
+
+			if (TextUtils.isEmpty(attributionId)) {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className, (new Throwable()).getStackTrace()[0].getMethodName()
+						,(new Throwable()).getStackTrace()[0]	.getLineNumber()
+						,"attributionId is empty"
+						,1
+						,false);
+			} else {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className, (new Throwable()).getStackTrace()[0].getMethodName()
+						,(new Throwable()).getStackTrace()[0]	.getLineNumber()
+						,"attributionId is [" + attributionId + "]"
+						,1
+						,false);
+				SmacTracking.sesid = attributionId;
+			}
+
+			dbHelper = new SmacDBHelper();
+			dbHelper.updUser(null, SmacTracking.sesid, null, null);
+			dbHelper.close();
+
+			sendInstall(fromContext
+							, SmacTracking.smacMv
+							, SmacTracking.sesid
+							, SmacTracking.smacVerify
+							, SmacTracking.smacSuid
+							, SmacTracking.smacSales
+							, SmacTracking.smacVolume
+							, SmacTracking.smacValue
+							, 1);
+
+			// FB計測のみの場合は終了
+			if(cvMode.equals("1")){
+				return;
+			}
+		}
+
+		// INSTALL_REFERRERで計測する、且つSmacReceiver経由で入ってきた場合
+		if(referrerFlg.equals("1") && installFlg != 1){
+
+			if(SmacTracking.isReceive == true) {
+
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"INSTALL_REFERRER経由 : OS 3.1以上", 1, false);
+			} else if(Build.VERSION.SDK_INT < 12) {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"OS 3.1未満なので計測実施", 1, false);
+			} else {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"OS 3.1以上でINSTALL_REFERRER経由ではないのでスキップ ", 1, false);
+				return;
+			}
+
+			SmacTracking.sesid = SmacUtils.readSesid(fromContext);
+
+			dbHelper = new SmacDBHelper();
+			dbHelper.updUser(null, SmacTracking.sesid, null, null);
+			dbHelper.close();
+
+			sendInstall(fromContext
+					, SmacTracking.smacMv
+					, SmacTracking.sesid
+					, SmacTracking.smacVerify
+					, SmacTracking.smacSuid
+					, SmacTracking.smacSales
+					, SmacTracking.smacVolume
+					, SmacTracking.smacValue
+					, 0);
+
+			return;
+		}
+
+		// ブラウザーから起動された場合
+		if (Intent.ACTION_VIEW.equals(action) && installFlg != 1) {
+
+			fromBrowser();
+			return;
+		}
+
+		// 送信リトライ(ブラウザ起動済みで送信失敗)
+		if (isBrowserUped == 1 && installFlg != 1) {
+
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"送信リトライ", 1, false);
+
+			SmacTracking.sesid = (String)userMap.get("SESID");
+
+			sendInstall(fromContext
+					, SmacTracking.smacMv
+					, SmacTracking.sesid
+					, SmacTracking.smacVerify
+					, SmacTracking.smacSuid
+					, SmacTracking.smacSales
+					, SmacTracking.smacVolume
+					, SmacTracking.smacValue
+					, 0);
+
+			return;
+		}
+
+		if (!referrerFlg.equals("1") && installFlg != 1) {
+
+			// ブラウザを開く場合
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"ブラウザを開く", 1, false);
+
+			String uri = "";
+			if (SmacTracking.actionPoint.get("welcome_type").equals("0")) {
+
+				dbHelper = new SmacDBHelper();
+				dbHelper.updInstall(null, null, null, 1);
+				dbHelper.close();
+
+				// 白紙ページを開く
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"welcome_type=0", 1, false);
+
+				uri = smacConst.HTTP_PATH_UUID
+						+ "?sid=" + SmacTracking.siteId
+						+ "&scm=" + SmacTracking.smacAppScheme
+						+ "&idn=" + SmacTracking.smacAppHost
+						+ "&expr=" + (System.currentTimeMillis() / 1000)
+						+ "&isFirst=" + Boolean.toString(SmacTracking.isFirst);
+
+			} else {
+				// welcomeページかカスタムページを開く
+				try {
+					/** ################# tracelog ################# */
+					SmacUtils.recordLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "welcome_url="
+									+ SmacTracking.actionPoint.get("welcome_url"), 1, false);
+
+					SmacUtils smacUtils = new SmacUtils();
+
+					String param = "verify#"
+							+ smacUtils.base64Encode(SmacTracking.smacVerify.getBytes())
+							+ "&smac&suid#"
+							+ smacUtils.base64Encode(SmacTracking.smacSuid.getBytes())
+							+ "&smac&scm#" +SmacTracking.smacAppScheme + "&smac&idn#"
+							+ SmacTracking.smacAppHost + "&smac&site_id#" + SmacTracking.siteId
+							+ "&smac&mv#" + SmacTracking.smacMv + "&smac&expr#"
+							+ (System.currentTimeMillis() / 1000)
+							+ "&smac&sales#" + (SmacTracking.smacSales == null ? "" : SmacTracking.smacSales)
+							+ "&smac&volume#" + (SmacTracking.smacVolume == null ? "" : SmacTracking.smacVolume)
+							+ "&smac&value#" + (SmacTracking.smacValue == null ? "" : SmacTracking.smacValue);
+
+					/** ################# tracelog ################# */
+					SmacUtils.recordLog(
+							className,
+							(new Throwable()).getStackTrace()[0]
+									.getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(),
+							"PARAM : "
+									+ smacUtils.base64Encode(param.getBytes()),
+							1, false);
+
+					uri = SmacTracking.actionPoint.get("welcome_url")
+							+ "?param=" + smacUtils.base64Encode(param.getBytes());
+					dbHelper = new SmacDBHelper();
+					dbHelper.updInstall(1, null, null, null);
+					dbHelper.close();
+
+					/** ################# tracelog ################# */
+					SmacUtils.recordLog(className,
+							(new Throwable()).getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0].getLineNumber(),
+							"ウェルカムページでの通知成功", 2, false);
+
+					/** ################# tracelog ################# */
+					SmacUtils.recordLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "URI : " + uri, 1, false);
+				} catch (Exception e) {
+					/** ################# tracelog ################# */
+					SmacUtils.recordLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "URI生成エラー", 1, false);
+
+					/** ################# errorlog ################# */
+					SmacUtils.recordErrorLog(className, (new Throwable())
+							.getStackTrace()[0].getMethodName(),
+							(new Throwable()).getStackTrace()[0]
+									.getLineNumber(), "error", 2, false, e);
+				}
+			}
+
+			// ブラウザー呼出（初回起動情報送信）
+			Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uri));
+			intent.setClassName("com.android.browser",
+					"com.android.browser.BrowserActivity");
+			intent.addCategory(Intent.CATEGORY_DEFAULT);
+			intent.addCategory(Intent.CATEGORY_BROWSABLE);
+			intent.setFlags(Intent.FLAG_ACTIVITY_NO_HISTORY
+					| Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+					| Intent.FLAG_ACTIVITY_NO_ANIMATION
+					| Intent.FLAG_ACTIVITY_NEW_TASK);
+			try {
+				// SharedPreferenceにセッション生存フラグ保存
+				if (SmacTracking.isFirst) {
+					SharedPreferences pref = fromContext.getSharedPreferences(
+							smacConst.PREF_SMAC, Context.MODE_PRIVATE);
+					Editor e = pref.edit();
+					if (SmacTracking.isFirst) {
+						// 1はセッション保存
+						e.putInt(smacConst.PREF_SMAC_SESSION_ALIVE_FLG, 1);
+						e.putString("referrer_flg", SmacTracking.actionPoint.get("referrer_flg"));
+						e.putString("browser_up_flg", SmacTracking.actionPoint.get("browser_up_flg"));
+						e.putString("welcome_type", SmacTracking.actionPoint.get("welcome_type"));
+						e.putString("cv_mode", SmacTracking.actionPoint.get("cv_mode"));
+						e.commit();
+					}
+
+					// 念のため、別個にインスタンス生成
+					SharedPreferences refpref = fromContext
+							.getSharedPreferences(smacConst.PREF_SMAC,
+									Context.MODE_PRIVATE);
+
+					boolean isRead = false;
+					int count = 0;
+					while (!isRead) {
+
+						// 2はunknown
+						if (refpref.getInt(
+								smacConst.PREF_SMAC_SESSION_ALIVE_FLG, 2) == 1) {
+							// あんまり意味ないけど一応
+							isRead = true;
+							break;
+						} else {
+							count++;
+							// 0.5秒ウェイト
+							Thread.sleep(500);
+						}
+
+						if (count > 3) {
+							break;
+						}
+					}
+				}
+
+				fromContext.startActivity(intent);
+
+				// ここで一旦プロセスを落とす
+				android.os.Process.killProcess(android.os.Process.myPid());
+
+			} catch (Exception e) {
+				/** ################# errorlog ################# */
+				SmacUtils.recordErrorLog(className
+														,(new Throwable()).getStackTrace()[0].getMethodName()
+														,(new Throwable()).getStackTrace()[0].getLineNumber()
+														,e.toString()
+														,2
+														,false
+														, e);
+			}
+		}
+	}
+
+
+	/**
+	 * Install Tracking
+	 * @param fromContext
+	 * @param mv
+	 * @param sesid
+	 * @param verify
+	 * @param suid
+	 * @param sales
+	 * @param volume
+	 * @param value
+	 */
+	private void sendInstall(Context fromContext
+			, String mv
+			, String sesid
+			, String verify
+			, String suid
+			, Integer sales
+			, Integer volume
+			, Integer value
+			, int sendInstallMode
+			) {
+
+		SmacConst smacConst = new SmacConst();
+
+		String processName = null;
+
+		if (sendInstallMode == 1) {
+			processName = "FBインストール";
+		} else {
+			processName = "インストール";
+		}
+
+		/** ################# tracelog ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				processName + "計測通知処理開始", 1, false);
+
+		// 回線状態取得
+		if (!smacUtils.getNetworkStatus()) {
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					processName + "計測通知処理無効:理由[オフライン]", 1, false);
+		}
+
+		// 端末ID(AES暗号＋base64)
+
+		//String base64androidId = new String(
+		//		smacUtils.base64Encode(smacUtils.encodeAES128(smacUtils.getAndroidId().getBytes(), AES_KEY.getBytes())));
+
+		ArrayList<NameValuePair> param = new ArrayList<NameValuePair>();
+
+		String message = null;
+
+		param.add(new BasicNameValuePair("mv", mv)); // Smac上で発行されるmv
+		param.add(new BasicNameValuePair("verify", verify)); // アプリ上に保持するUUIDもしくは引数の値
+		param.add(new BasicNameValuePair("suid", suid)); // 任意のユーザ識別子
+		//param.add(new BasicNameValuePair("uid", base64androidId)); // 端末ID
+		param.add(new BasicNameValuePair("uid", "")); // 端末ID
+		param.add(new BasicNameValuePair("dn", smacUtils.getPhoneName())); // 端末名
+		param.add(new BasicNameValuePair("os", smacUtils.getOsVersion())); // OSバージョン
+
+		String cpiUrl = null;
+
+		if (sendInstallMode == 1) {
+			cpiUrl = smacConst.HTTP_PATH_FB_TRACKING;
+
+			param.add(new BasicNameValuePair("atid", sesid)); // FBセッションID
+
+			message = processName + "計測通知リクエストパラメータ[ mv = "
+					+ mv
+					+ " / verify = "
+					+ (TextUtils.isEmpty(verify) ? "" : verify)
+					+ " / atid = "
+					+ (TextUtils.isEmpty(sesid) ? "" : sesid)
+					+ " / suid = "
+					+ (TextUtils.isEmpty(suid) ? "" : suid)
+					+ " / uid = "
+					//+ (TextUtils.isEmpty(base64androidId) ? "" : base64androidId)
+					+ ""
+					+ " / dn = "
+					+ (TextUtils.isEmpty(smacUtils.getPhoneName()) ? "" : smacUtils.getPhoneName())
+					+ " / os = "
+					+ (TextUtils.isEmpty(smacUtils.getOsVersion()) ? "" : smacUtils.getOsVersion());
+		} else {
+			cpiUrl = smacConst.HTTP_PATH_TRACKING;
+
+			param.add(new BasicNameValuePair("sesid", sesid)); // セッションID
+			param.add(new BasicNameValuePair("sales", sales != null ? Integer
+					.toString(sales) : "")); // 金額
+			param.add(new BasicNameValuePair("volume", volume != null ? Integer
+					.toString(volume) : "")); // 数量
+			param.add(new BasicNameValuePair("value", value != null ? Integer
+					.toString(value) : "")); // 単価
+
+			message = processName + "計測通知リクエストパラメータ[ mv = "
+							+ mv
+							+ " / verify = "
+							+ (TextUtils.isEmpty(verify) ? "" : verify)
+							+ " / sesid = "
+							+ (TextUtils.isEmpty(sesid) ? "" : sesid)
+							+ " / suid = "
+							+ (TextUtils.isEmpty(suid) ? "" : suid)
+							+ " / sales = "
+							+ (sales == null ? "" : Integer.toString(sales))
+							+ " / volume = "
+							+ (volume == null ? "" : Integer.toString(volume))
+							+ " / value = "
+							+ (value == null ? "" : Integer.toString(value))
+							+ " / uid = "
+							//+ (TextUtils.isEmpty(base64androidId) ? "" : base64androidId)
+							+ ""
+							+ " / dn = "
+							+ (TextUtils.isEmpty(smacUtils.getPhoneName()) ? "" : smacUtils.getPhoneName())
+							+ " / os = "
+							+ (TextUtils.isEmpty(smacUtils.getOsVersion()) ? "" : smacUtils.getOsVersion());
+		}
+
+		/** ################# tracelog ################# */
+		SmacUtils.recordLog(className
+				,(new Throwable()).getStackTrace()[0].getMethodName()
+				,(new Throwable()).getStackTrace()[0].getLineNumber()
+				, message
+				, 1
+				, false);
+
+		SmacDBHelper dbHelper = new SmacDBHelper();
+		// 送信完了の場合DBのフラグ制御
+
+		if (smacUtils.sendCpiBySocket(cpiUrl, param)) {
+
+			if (sendInstallMode == 0) {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						processName + "計測の通知に成功", 0, false);
+				dbHelper.updInstall(1, null, null, 0);
+			} else {
+				/** ################# tracelog ################# */
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						processName + "計測の通知に成功", 0, false);
+				dbHelper.updInstall(null, 1, null, 0);
+			}
+
+		} else {
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					processName + "計測の通知に失敗", 2, false);
+		}
+
+		dbHelper.close();
+
+		// 成果点情報一時情報削除
+		SharedPreferences dpref = fromContext.getSharedPreferences(
+			smacConst.PREF_SMAC, Context.MODE_PRIVATE);
+		dpref.edit().clear().commit();
+
+		/** ################# tracelog ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				processName + "計測通知処理終了", 1, false);
+
+	}
+
+
+	private void fromBrowser(){
+
+		/** ################# tracelog ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"CPI計測[ブラウザ起動時の処理]", 1, false);
+
+		Uri uri = SmacTracking.intent.getData();
+		/** ################# tracelog ################# */
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"uri = " + uri.toString(), 1, false);
+
+		String q_scheme = "";
+		String q_host = "";
+
+		if (uri.getScheme() != null) {
+			q_scheme = uri.getScheme();
+		}
+
+		if (uri.getHost() != null) {
+			q_host = uri.getHost();
+		}
+
+	// schemeチェック
+	if (!SmacTracking.smacAppScheme.equals(q_scheme) || !SmacTracking.smacAppHost.equals(q_host)) {
+		/** ################# tracelog ################# */
+		SmacUtils.recordLog(
+				className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"CPI計測 [ブラウザから起動] : Smac以外のscheme or hostから起動 [scheme = "
+						+ q_scheme
+						+ " / host = "
+						+ q_host + "]",
+				1, false);
+		return;
+	}
+
+	String sesid = uri.getQueryParameter("sesid");
+
+	/** ################# tracelog ################# */
+	SmacUtils.recordLog(
+			className,
+			(new Throwable()).getStackTrace()[0].getMethodName(),
+			(new Throwable()).getStackTrace()[0].getLineNumber(),
+			"ブラウザからリクエストパラメータ取得[sesid = "
+				+ (TextUtils.isEmpty(sesid) ? "" : sesid)
+				+ "]",
+			1, false);
+
+		if (sesid == null) {
+				sesid = "";
+		}
+
+		SmacDBHelper dbHelper;
+		dbHelper = new SmacDBHelper();
+		dbHelper.updUser(sesid, null, null, null);
+		dbHelper.close();
+
+		sendInstall(SmacTracking.context
+						, SmacTracking.smacMv
+						, sesid
+						, SmacTracking.smacVerify
+						, SmacTracking.smacSuid
+						, SmacTracking.smacSales
+						, SmacTracking.smacVolume
+						, SmacTracking.smacValue
+						, 0);
+	}
+
+}

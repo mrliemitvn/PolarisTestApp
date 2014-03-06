@@ -1,0 +1,191 @@
+package jp.co.septeni.smac.SmacTracking;
+
+public class SmacConst {
+
+	/**
+	 * --------- 定数定義 ---------
+	 * */
+
+	// SDK更新時に手動で更新 start >
+	// ----------------------------------
+	/** Smac SDK Version ※バージョンアップごとに更新が必要 */
+	protected final String SDK_VERSION = "3.0.2";
+
+	// end > SDK更新時に手動で更新
+	// -----------------------------------
+
+	// 以下、値固定
+	// -----------------------------------
+
+	/** パッケージネーム */
+	protected final String SMAC_PACKAGE_NAME = "jp.co.septeni.smac";
+
+	/** アプリ内計測の保存数のシステム的な最大値 */
+	protected final int SMAC_APP_LIMIT_SAVE_MAX = 9999;
+
+	/** アプリ内計測の保存モード（追記なし） */
+	protected final int SMAC_APP_SAVE_NON_ADD = 0;
+
+	/** アプリ内計測の保存モード（古いレコードを上書き） */
+	protected final int SMAC_APP_SAVE_OLD_REWRITE = 1;
+
+	/** セッションID保存期間 (24時間) */
+	protected final int SMAC_APP_SAVE_SESSION_HOUR = 24;
+
+	/** 圧縮上限数 */
+	protected final int SMAC_APP_COMPRESS_LIMIT = 100;
+
+	// 通信関連
+
+	/** Smac ドメイン */
+
+	protected final String SMAC_HOST = "track-sp.sm-ac.jp";
+
+	/** UUID取得用URI */
+	protected final String PATH_UUID = SMAC_HOST + "/uuid/index.php";
+
+	/** 成果点情報取得用URI */
+	protected final String PATH_ACTION_POINT = SMAC_HOST
+			+ "/info/get_action_point.php";
+
+	/** CPI計測通知用URI */
+	protected final String PATH_CPI_TRACKING = SMAC_HOST + "/track/index.php";
+
+	/** FB CPI計測通知用URI */
+	protected final String PATH_FB_CPI_TRACKING = SMAC_HOST + "/fbtrack/";
+
+	/** アプリ内計測通知用URI */
+	protected final String PATH_APP_TRACKING = SMAC_HOST + "/track/app.php";
+
+	/** 疎通確認用URI */
+	protected final String PATH_HEARTBEAT = SMAC_HOST + "/heartbeat.html";
+
+	/** UUID取得用HTTP URL */
+	protected final String HTTP_PATH_UUID = "http://" + PATH_UUID;
+
+	/** 成果点情報取得用HTTP URL */
+	protected final String HTTP_PATH_ACTION_POINT = "http://"
+			+ PATH_ACTION_POINT;
+
+	/** CPI計測通知用HTTP URL */
+	protected final String HTTP_PATH_TRACKING = "http://" + PATH_CPI_TRACKING;
+
+	/** FB CPI計測通知用HTTP URL */
+	protected final String HTTP_PATH_FB_TRACKING = "http://" + PATH_FB_CPI_TRACKING;
+
+	/** アプリ内計測通知用HTTP URL */
+	protected final String HTTP_PATH_APP_TRACKING = "http://"
+			+ PATH_APP_TRACKING;
+
+	/** 疎通確認用HTTP URL */
+	protected final String HTTP_PATH_HEARTBEAT = "http://" + PATH_HEARTBEAT;
+
+	// AndroidManifest.xml 関連
+
+	/** SiteIdの項目名 */
+	protected final String XML_PARAM_NAME_SMAC_SITE_ID = "SMAC_SITE_ID";
+
+	/** レコード保存数の最大の項目名 */
+	protected final String XML_PARAM_NAME_SMAC_APP_SAVE_MAX = "SMAC_APP_SAVE_MAX";
+
+	/** 保存モードの項目名 */
+	protected final String XML_PARAM_NAME_SMAC_APP_SAVE_MODE = "SMAC_APP_SAVE_MODE";
+
+	/** ログモードの項目名 */
+	protected final String XML_PARAM_NAME_SMAC_LOG_MODE = "SMAC_LOG_MODE";
+
+	/** 計測モードの項目名
+	 *  0 = 通常CPI計測のみ
+	 *  1 = FB計測のみ
+	 *  2 = 通常 & FB計測
+	 * */
+	protected final String XML_PARAM_NAME_SMAC_CV_MODE = "SMAC_CV_MODE";
+
+	/** AndroidManifest.xmlの型（String) */
+	protected final String XML_VALUE_TYPE_STRING = "string";
+
+	/** AndroidManifest.xmlの型（int) */
+	protected final String XML_VALUE_TYPE_INT = "int";
+
+	/** AndroidManifest.xmlの型（boolean) */
+	protected final String XML_VALUE_TYPE_BOOL = "boolean";
+
+	/** AndroidManifest.xmlの型（float) */
+	protected final String XML_VALUE_TYPE_FLOAT = "float";
+
+	// DB関連
+
+	/** sqliteファイル名 */
+	protected static final String DB_NAME = "smacTracking.db";
+
+	/** ユーザ情報保存用テーブル */
+	protected final String DB_TABLE_NAME_USER = "USER";
+
+	/** CPI計測保存用テーブル */
+	protected final String DB_TABLE_NAME_INSTALL = "INSTALL";
+
+	/** アプリ内計測保存用テーブル */
+	protected final String DB_TABLE_NAME_ACTION = "ACTION";
+
+	/** ユーザ情報保存用テンポラリテーブル */
+	protected final String DB_TABLE_NAME_TMP_USER = "TMP_USER";
+
+	/** CPI計測保存用テンポラリテーブル */
+	protected final String DB_TABLE_NAME_TMP_INSTALL = "TMP_INSTALL";
+
+	/** アプリ内計測保存用テンポラリテーブル */
+	protected final String DB_TABLE_NAME_TMP_ACTION = "TMP_ACTION";
+
+	/** DBの型（TEXT） */
+	protected final String DB_COLMUN_TYPE_TEXT = "TEXT";
+
+	/** DBの型（INTEGER） */
+	protected final String DB_COLMUN_TYPE_INTEGER = "INTEGER";
+
+	/** DBの型（INT） */
+	protected final String DB_COLMUN_TYPE_INT = "INT";
+
+	/** バージョン管理用カラム名 */
+	protected final String DB_VERSION_COLMUN = "DB_VERSION";
+
+	// SharedPreference関連
+
+	/** Smac用Preference */
+	protected final String PREF_SMAC = "smac_prefs";
+
+	/** セッションの生存フラグ */
+	protected final String PREF_SMAC_SESSION_ALIVE_FLG = "session_alive_flg";
+
+	// その他
+
+	/** ログファイル名 */
+	protected final String LOG_FILE_NAME = "smac.log";
+
+	/** メイン処理の成功用ログのタグ */
+	protected final String LOG_SUCCESS_TAG = "SMAC-SUCCESS_LOG";
+
+	/** traceログのタグ */
+	protected final String LOG_TRACE_TAG = "SMAC-TRACE_LOG";
+
+	/** errorログのタグ */
+	protected final String LOG_ERROR_TAG = "SMAC-ERROR_LOG";
+
+	/** 文字コード タブ */
+	protected final String CODE_TAB = "\t";
+
+	/** 文字コード 改行 */
+	protected final String CODE_LF = "\n";
+
+	// デフォルトパラメータ
+	/** ログ出力モードの切替（On：true／Off：false） */
+	protected final boolean SMAC_DEFAULT_LOG_MODE = false;
+
+	/** 最大保存件数（推奨値999） */
+	protected final int SMAC_APP_DEFAULT_SAVE_MAX = 999;
+
+	/**
+	 * 最大保存件数達成時動作 （追記なし：0／古いデータを上書き：1／新しいデータを上書き：2）
+	 * */
+	protected final int SMAC_APP_DEFAULT_MAX_MODE = 1;
+
+}

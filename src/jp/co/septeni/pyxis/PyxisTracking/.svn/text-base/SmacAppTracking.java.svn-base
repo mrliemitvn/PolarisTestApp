@@ -1,0 +1,124 @@
+/**
+ *
+ */
+package jp.co.septeni.smac.SmacTracking;
+
+import java.util.HashMap;
+
+import android.content.Context;
+
+/**
+ * @author t_kono
+ *
+ */
+public class SmacAppTracking {
+
+	String className = this.getClass().getSimpleName();
+
+	/**
+	 * アプリ内計測情報保存処理
+	 *
+	 * @param fromContext
+	 * @param fromIntent
+	 * @param mv
+	 * @param verify
+	 * @param suid
+	 * @param siteId
+	 */
+	protected void save(String mv, String verify, String suid, String siteId,
+			Integer sales, Integer volume, Integer value, Integer saveMax,
+			Integer saveMaxMode) {
+
+		SmacUtils smacUtils = new SmacUtils();
+		SmacConst smacConst = new SmacConst();
+		Context fromContext = SmacTracking.context;
+
+		SmacUtils.readSesid(fromContext);
+
+		// 設定情報のチェック
+		if (!smacUtils.checkParamasForAppSave(mv, siteId, saveMax, saveMaxMode)) {
+			SmacUtils.processKiller();
+		}
+
+		// 最大保存件数が設定されていないか、システム上の最大値以上、1未満の場合はデフォルト（999）で設定
+		if (saveMax == null || saveMax > smacConst.SMAC_APP_LIMIT_SAVE_MAX
+				|| saveMax < 1) {
+
+			saveMax = smacConst.SMAC_APP_DEFAULT_SAVE_MAX;
+		}
+
+		// 保存モードが設定されていないか、システム上の規定値以外の場合はデフォルト（古いレコードを上書き）で設定
+		if (saveMaxMode == null || saveMaxMode > 1 || saveMaxMode < 0) {
+			saveMaxMode = smacConst.SMAC_APP_DEFAULT_MAX_MODE;
+		}
+
+		SmacDBHelper dbHelper = new SmacDBHelper();
+
+		// セッションIDをセット
+		// ※CPI計測有りで初回起動時、且つ初回起動日時から規定時間以内の場合
+		HashMap<String, Object> installMap = dbHelper.selInstall();
+
+		long currentDateLong = System.currentTimeMillis() / 1000;
+
+		String sesid = null;
+		int actFstFlg = 0;
+		if (SmacTracking.isFirst && SmacTracking.isEnableCpi) {
+			actFstFlg = 1;
+				sesid = SmacTracking.sesid;
+		}
+
+		String currentDateString = String.valueOf(currentDateLong);
+
+		// 保存件数取得
+		int nowSaveCnt = dbHelper.selCntAction(null);
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"アプリ内計測[現在の保存件数 = " + Integer.toString(nowSaveCnt) + " ]", 1,
+				false);
+
+		// 最大件数と比較
+		if (saveMax <= nowSaveCnt) {
+			/** ################# tracelog ################# */
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"アプリ内計測[最大保存件数超過]", 1, false);
+			// 古いデータを上書き
+			if (saveMaxMode == smacConst.SMAC_APP_SAVE_OLD_REWRITE) {
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"アプリ内計測[過去データ上書き]", 1, false);
+				// DBへ更新
+				dbHelper.updActionTargetOld(mv, verify, suid, sesid,
+						currentDateString, actFstFlg);
+			} else {
+				SmacUtils.recordLog(className,
+						(new Throwable()).getStackTrace()[0].getMethodName(),
+						(new Throwable()).getStackTrace()[0].getLineNumber(),
+						"アプリ内計測[追記なし]", 1, false);
+			}
+
+		} else {
+			// DBへ保存
+			dbHelper.insAction(mv, verify, suid, sesid, sales, volume, value,
+					currentDateString, actFstFlg);
+		}
+
+		dbHelper.close();
+	}
+
+	/**
+	 * アプリ内計測情報送信
+	 *
+	 * @param fromContext
+	 */
+	protected void send() {
+
+		// アプリ内計測情報送信
+		SmacSendTask task = new SmacSendTask();
+		task.execute();
+	}
+
+}

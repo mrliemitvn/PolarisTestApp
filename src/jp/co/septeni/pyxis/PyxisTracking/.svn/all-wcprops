@@ -1,0 +1,65 @@
+K 25
+svn:wc:ra_dav:version-url
+V 98
+/svn/tougou/!svn/ver/16099/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking
+END
+SmacAppTracking.java
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/svn/tougou/!svn/ver/15615/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacAppTracking.java
+END
+SmacReceiver.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/svn/tougou/!svn/ver/15648/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacReceiver.java
+END
+SmacSendTask.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/svn/tougou/!svn/ver/16099/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacSendTask.java
+END
+SmacDBHelper.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/svn/tougou/!svn/ver/15615/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacDBHelper.java
+END
+SmacCpiTracking.java
+K 25
+svn:wc:ra_dav:version-url
+V 119
+/svn/tougou/!svn/ver/16099/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacCpiTracking.java
+END
+SmacConst.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/svn/tougou/!svn/ver/16099/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacConst.java
+END
+SmacUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 113
+/svn/tougou/!svn/ver/16072/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacUtils.java
+END
+SmacUpdate.java
+K 25
+svn:wc:ra_dav:version-url
+V 114
+/svn/tougou/!svn/ver/10347/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacUpdate.java
+END
+FbUtils.java
+K 25
+svn:wc:ra_dav:version-url
+V 111
+/svn/tougou/!svn/ver/15615/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/FbUtils.java
+END
+SmacTracking.java
+K 25
+svn:wc:ra_dav:version-url
+V 116
+/svn/tougou/!svn/ver/15770/40_%E5%AE%9F%E8%A3%85/android/trunk/src/jp/co/septeni/smac/SmacTracking/SmacTracking.java
+END

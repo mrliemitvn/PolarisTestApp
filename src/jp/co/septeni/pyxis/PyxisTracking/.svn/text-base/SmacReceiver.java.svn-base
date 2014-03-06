@@ -1,0 +1,120 @@
+package jp.co.septeni.smac.SmacTracking;
+
+import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.Set;
+
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.ActivityInfo;
+import android.content.pm.PackageManager;
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Build.VERSION;
+
+public class SmacReceiver extends BroadcastReceiver {
+	static String TAG = SmacReceiver.class.getSimpleName();
+	private static String className = new SmacReceiver().getClass()
+			.getSimpleName();
+	SmacUtils smacUtils = new SmacUtils();
+
+	@Override
+	public void onReceive(Context context, Intent intent) {
+
+		//Processing Install_Referrer event
+		handleEvent(context, intent);
+
+		//Pass event to other sdk and call onReceive event to process event
+		try{
+			ArrayList<String> classNames = getSdkClassesInManifestFile(context);
+
+			if(classNames != null && classNames.size() > 0) {
+				for(String className : classNames){
+					((BroadcastReceiver)Class.forName(className).newInstance()).onReceive(context, intent);
+				}
+			}
+		} catch (Exception e){
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"Error in invoking others sdk", 2, false);
+		}
+	}
+	/*
+	 * Get SDK list in Manifest file (other sdks putted in <meta-data> tag of <receiver>)
+	 * @param Context: context of BroadcastReceiver
+	 * @return ArrayList<String> : array of class handling event of other sdk
+	 */
+	private ArrayList<String> getSdkClassesInManifestFile(Context context)
+	{
+		ArrayList<String> classNames = new ArrayList<String>();
+		ComponentName receiverComp = new ComponentName(context, SmacReceiver.class);
+
+		try{
+			//Get meta data
+			ActivityInfo ai = context.getPackageManager().getReceiverInfo(receiverComp, PackageManager.GET_META_DATA);
+
+			//extract meda-data
+			Bundle bundle = ai.metaData;
+			if(bundle == null){
+				return null;
+			}
+			Set<String> keys = bundle.keySet();
+
+			//iterate through all metadata tags
+			Iterator<String> it = keys.iterator();
+			String key;
+			String className;
+
+			while(it.hasNext()){
+				key = it.next();
+				className = bundle.getString(key);
+				classNames.add(className);
+			}
+		} catch (Exception e){
+			SmacUtils.recordLog(className,
+					(new Throwable()).getStackTrace()[0].getMethodName(),
+					(new Throwable()).getStackTrace()[0].getLineNumber(),
+					"Error in geting SDK list", 2, false);
+		}
+		return classNames;
+	}
+	/*
+	 * Handle event Install_Referrer of Smac SDK (including write session_id to file and send install tracking)
+	 * @param Context: context of BroadcastReceiver
+	 * @param Intent: intent of BroadcastReceiver
+	 */
+	private void handleEvent(Context context, Intent intent) {
+
+		String sesid = null;
+		try {
+			sesid = URLDecoder.decode(intent.getStringExtra("referrer"), "UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+
+		SmacUtils.recordLog(className,
+				(new Throwable()).getStackTrace()[0].getMethodName(),
+				(new Throwable()).getStackTrace()[0].getLineNumber(),
+				"sesid = " + sesid, 1, false);
+		SmacUtils.writeSesid(context, sesid);
+
+		// 3.1以上の場合はReceive経由で計測
+		// 3.1未満はsesidだけ保存し、計測はonCreateのtrackInstallから
+		if (Build.VERSION.SDK_INT >= 12) {
+			// CPI計測
+			SmacTracking.init(context, intent, null, null);
+			SmacTracking.isReceive = true;
+			SmacTracking.trackInstall(SmacTracking.smacMv
+													, SmacTracking.smacVerify
+													, SmacTracking.smacSuid
+													, SmacTracking.smacSales
+													, SmacTracking.smacVolume
+													, SmacTracking.smacValue);
+		}
+	}
+}
